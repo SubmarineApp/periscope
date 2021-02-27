@@ -9,11 +9,13 @@ class CalendarPage extends StatefulWidget {
 class _CalendarPageState extends State<CalendarPage> {
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-        title: 'Calendar',
-        home: Scaffold(
-            body: Center(
-          child: Text('HELLO I AM NOT A CALENDAR'),
-        )));
+    return Scaffold(
+      body: SfCalendar(
+        view: CalendarView.month,
+        dataSource: MeetingDataSource(_getDataSource()),
+        monthViewSettings: MonthViewSettings(
+            appointmentDisplayMode: MonthAppointmentDisplayMode.appointment),
+      ),
+    );
   }
 }
