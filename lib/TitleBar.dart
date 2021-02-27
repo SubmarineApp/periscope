@@ -42,8 +42,8 @@ class _TitleBarState extends State<TitleBar> {
         body: TabBarView(
           children: [
             OverviewPage(),
-            SubscriptionsPage(),
             CalendarPage(),
+            SubscriptionsPage(),
           ],
         ),
       ),
