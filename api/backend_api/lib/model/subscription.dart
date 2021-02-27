@@ -21,7 +21,15 @@ class Subscription {
   int cost;
 
   int trialCost;
-  Subscription();
+  Subscription(
+      {this.title,
+      this.category,
+      this.startsAt,
+      this.endsAt,
+      this.recurrence,
+      this.nextRecurrence,
+      this.trialEndsAt,
+      this.cost});
 
   @override
   String toString() {
@@ -69,18 +77,26 @@ class Subscription {
       json[r'category'] = category;
     }
     if (startsAt != null) {
-      json[r'starts_at'] = startsAt.toString();
+      json[r'starts_at'] = startsAt.toDateString();
     }
-    json[r'ends_at'] = endsAt.toString();
+    if (endsAt != null) {
+      json[r'ends_at'] = endsAt.toDateString();
+    }
     if (recurrence != null) {
       json[r'recurrence'] = recurrence;
     }
-    json[r'next_recurrence'] = nextRecurrence.toString();
-    json[r'trial_ends_at'] = trialEndsAt.toString();
+    if (nextRecurrence != null) {
+      json[r'next_recurrence'] = nextRecurrence.toDateString();
+    }
+    if (trialEndsAt != null) {
+      json[r'trial_ends_at'] = trialEndsAt.toDateString();
+    }
     if (cost != null) {
       json[r'cost'] = cost;
     }
-    json[r'trial_cost'] = trialCost;
+    if (trialCost != null) {
+      json[r'trial_cost'] = trialCost;
+    }
     return json;
   }
 
