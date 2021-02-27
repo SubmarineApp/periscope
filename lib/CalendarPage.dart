@@ -9,6 +9,11 @@ class CalendarPage extends StatefulWidget {
 class _CalendarPageState extends State<CalendarPage> {
   @override
   Widget build(BuildContext context) {
-    return Container();
+    return MaterialApp(
+        title: 'Calendar',
+        home: Scaffold(
+            body: Center(
+          child: Text('HELLO I AM NOT A CALENDAR'),
+        )));
   }
 }
