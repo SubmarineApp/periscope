@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:submarine/TitleBar.dart';
 
 class CalendarPage extends StatefulWidget {
   @override
@@ -8,6 +9,6 @@ class CalendarPage extends StatefulWidget {
 class _CalendarPageState extends State<CalendarPage> {
   @override
   Widget build(BuildContext context) {
-    return Container();
+    return TitleBar();
   }
 }
