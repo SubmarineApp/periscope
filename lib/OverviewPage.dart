@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:submarine/TitleBar.dart';
 
 class OverviewPage extends StatefulWidget {
   @override
@@ -9,6 +8,6 @@ class OverviewPage extends StatefulWidget {
 class _OverviewPageState extends State<OverviewPage> {
   @override
   Widget build(BuildContext context) {
-    return TitleBar();
+    return Container();
   }
 }

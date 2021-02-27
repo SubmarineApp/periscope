@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:submarine/CalendarPage.dart';
+import 'package:submarine/OverviewPage.dart';
+import 'package:submarine/SubscriptionsPage.dart';
 
 class TitleBar extends StatefulWidget {
   @override
@@ -38,9 +41,9 @@ class _TitleBarState extends State<TitleBar> {
         ),
         body: TabBarView(
           children: [
-            Icon(Icons.directions_car),
-            Icon(Icons.directions_transit),
-            Icon(Icons.directions_bike),
+            OverviewPage(),
+            SubscriptionsPage(),
+            CalendarPage(),
           ],
         ),
       ),

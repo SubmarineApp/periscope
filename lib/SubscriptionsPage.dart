@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:submarine/TitleBar.dart';
 
 class SubscriptionsPage extends StatefulWidget {
   @override
@@ -9,6 +8,6 @@ class SubscriptionsPage extends StatefulWidget {
 class _SubscriptionsPageState extends State<SubscriptionsPage> {
   @override
   Widget build(BuildContext context) {
-    return TitleBar();
+    return Container();
   }
 }
