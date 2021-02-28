@@ -28,6 +28,7 @@ dependencies:
     path: api/backend_api
   intl: ^0.16.1
   syncfusion_flutter_calendar: ^18.4.44
+  mask_text_input_formatter: ^1.2.1 
 
 
   # The following adds the Cupertino Icons font to your application.
