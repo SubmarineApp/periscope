@@ -38,6 +38,16 @@ class _SubscriptionDataSource extends DataGridSource<Subscription> {
         return subscription.title;
       case 'category':
         return categories[subscription.category].name;
+      case 'monthly_cost':
+        switch (subscription.recurrence) {
+          case 'monthly':
+            return subscription.cost / 100.0;
+          case 'weekly':
+            return (subscription.cost / 100.0) * 4.0;
+          case 'yearly':
+            return (subscription.cost / 100.0) / 12.0;
+        }
+        return ' ';
       case 'cost':
         return subscription.cost / 100.0;
       case 'starts_at':
@@ -182,8 +192,14 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
                   allowSorting: true,
                 ),
                 GridNumericColumn(
-                  headerText: 'Monthly Cost',
+                  headerText: 'Cost',
                   mappingName: 'cost',
+                  numberFormat: NumberFormat.simpleCurrency(),
+                  allowSorting: true,
+                ),
+                GridNumericColumn(
+                  headerText: 'Monthly Cost',
+                  mappingName: 'monthly_cost',
                   numberFormat: NumberFormat.simpleCurrency(),
                   allowSorting: true,
                 ),
