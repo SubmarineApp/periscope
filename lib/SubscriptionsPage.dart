@@ -720,24 +720,29 @@ class _AddSubscriptionFormState extends State<AddSubscriptionForm> {
                 ),
                 Row(
                   children: <Widget>[
-                    Container(
-                      padding: EdgeInsets.only(left: 20, right: 20),
-                      child: Text(
-                        "${DateFormat.yMMMMd('en_US').format(_startDate)}",
-                        style: TextStyle(fontSize: 20),
+                    Expanded(
+                      child: Container(
+                        padding: EdgeInsets.only(left: 20),
+                        child: Text(
+                          "${DateFormat.yMMMMd('en_US').format(_startDate)}",
+                          style: TextStyle(fontSize: 20),
+                        ),
                       ),
                     ),
-                    ElevatedButton(
-                      onPressed: () async {
-                        _startDate = await showDatePicker(
-                          context: context,
-                          initialDate: DateTime.now(),
-                          firstDate: DateTime(2000),
-                          lastDate: DateTime(2025),
-                        );
-                        setState(() {});
-                      },
-                      child: Icon(Icons.calendar_today),
+                    Container(
+                      padding: EdgeInsets.only(right: 20),
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          _startDate = await showDatePicker(
+                            context: context,
+                            initialDate: DateTime.now(),
+                            firstDate: DateTime(2000),
+                            lastDate: DateTime(2025),
+                          );
+                          setState(() {});
+                        },
+                        child: Icon(Icons.calendar_today),
+                      ),
                     ),
                   ],
                 ),
