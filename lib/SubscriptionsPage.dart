@@ -44,89 +44,93 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: <Widget>[
-        ButtonBar(
-          alignment: MainAxisAlignment.start,
+    return SingleChildScrollView(
+      scrollDirection: Axis.vertical,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Column(
           children: <Widget>[
-            TextButton(
-              child: Text('Add'),
-              onPressed: () {
-                try {
-                  client.subscriptionsPost(
-                      subscription: Subscription(
-                    title: "Test",
-                    category: 1,
-                    recurrence: "weekly",
-                    startsAt: DateTime(2020, 1, 1),
-                    cost: 1000,
-                  ));
-                } catch (e) {
-                  debugPrint(e);
-                }
-              },
+            ButtonBar(
+              alignment: MainAxisAlignment.start,
+              children: <Widget>[
+                // TODO: Create form for adding a new subscription
+                TextButton(
+                  child: Text('Add'),
+                  onPressed: () {
+                    try {
+                      client.subscriptionsPost(
+                          subscription: Subscription(
+                        title: "Test",
+                        category: 1,
+                        recurrence: "weekly",
+                        startsAt: DateTime(2020, 1, 1),
+                        cost: 1000,
+                      ));
+                    } catch (e) {
+                      debugPrint(e);
+                    }
+                  },
+                ),
+                TextButton(
+                  child: Text('Modify'),
+                  onPressed: () {/** */},
+                ),
+                TextButton(
+                  child: Text('Remove'),
+                  onPressed: () {/** */},
+                ),
+              ],
             ),
-            TextButton(
-              child: Text('Modify'),
-              onPressed: () {/** */},
-            ),
-            TextButton(
-              child: Text('Remove'),
-              onPressed: () {/** */},
+            DataTable(
+              columns: <DataColumn>[
+                DataColumn(
+                    label: Text('Title'),
+                    numeric: false,
+                    onSort: (columnIndex, ascending) {
+                      setState(() {
+                        sort = !sort;
+                      });
+                      onSortColum(columnIndex, ascending);
+                    }),
+                DataColumn(
+                  label: Text('Description'),
+                  numeric: false,
+                ),
+                DataColumn(
+                  label: Text('Cost'),
+                  numeric: true,
+                ),
+                DataColumn(
+                  label: Text('Recurrence'),
+                  numeric: false,
+                ),
+              ],
+              rows: items
+                  .map(
+                    (item) => DataRow(
+                        selected: selected.contains(item),
+                        cells: [
+                          DataCell(Text(item.title)),
+                          DataCell(Text(categories[item.category].name)),
+                          DataCell(
+                              Text(formatCurrency.format(item.cost / 100.0))),
+                          DataCell(Text(item.recurrence))
+                        ],
+                        onSelectChanged: (bool value) {
+                          setState(() {
+                            if (value) {
+                              selected.add(item);
+                            } else {
+                              selected.remove(item);
+                            }
+                          });
+                        }),
+                  )
+                  .toList(),
             ),
           ],
         ),
-        SizedBox(
-          width: double.infinity,
-          child: DataTable(
-            columns: <DataColumn>[
-              DataColumn(
-                  label: Text('Title'),
-                  numeric: false,
-                  onSort: (columnIndex, ascending) {
-                    setState(() {
-                      sort = !sort;
-                    });
-                    onSortColum(columnIndex, ascending);
-                  }),
-              DataColumn(
-                label: Text('Description'),
-                numeric: false,
-              ),
-              DataColumn(
-                label: Text('Cost'),
-                numeric: true,
-              ),
-              DataColumn(
-                label: Text('Recurrence'),
-                numeric: false,
-              ),
-            ],
-            rows: items
-                .map(
-                  (item) => DataRow(
-                      selected: selected.contains(item),
-                      cells: [
-                        DataCell(Text(item.title)),
-                        DataCell(Text(categories[item.category].name)),
-                        DataCell(
-                            Text(formatCurrency.format(item.cost / 100.0))),
-                        DataCell(Text(item.recurrence))
-                      ],
-                      onSelectChanged: (bool value) {
-                        setState(() {
-                          if (value) {
-                            selected.remove(item);
-                          } else {
-                            selected.add(item);
-                          }
-                        });
-                      }),
-                )
-                .toList(),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
