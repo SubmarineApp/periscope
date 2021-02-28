@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:backend_api/api.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 
 class SubscriptionsPage extends StatefulWidget {
   final DefaultApi client;
@@ -121,12 +120,14 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
                   },
                 ),
                 TextButton(
+                  // TODO
                   child: Text('Modify'),
                   onPressed: () {/** */},
                 ),
                 TextButton(
                   child: Text('Remove'),
                   onPressed: () {
+                    // Change to setting ends at date
                     this._confirmRemoval();
                   },
                 ),
@@ -226,6 +227,8 @@ class _AddSubscriptionFormState extends State<AddSubscriptionForm> {
 
   @override
   Widget build(BuildContext context) {
+    // TODO: Fix formatting to look nice
+    // TODO: Add trial form entries
     return Scaffold(
       appBar: AppBar(),
       body: Form(
