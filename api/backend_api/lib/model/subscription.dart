@@ -21,15 +21,17 @@ class Subscription {
   int cost;
 
   int trialCost;
-  Subscription(
-      {this.title,
-      this.category,
-      this.startsAt,
-      this.endsAt,
-      this.recurrence,
-      this.nextRecurrence,
-      this.trialEndsAt,
-      this.cost});
+  Subscription({
+    this.title,
+    this.category,
+    this.startsAt,
+    this.endsAt,
+    this.recurrence,
+    this.nextRecurrence,
+    this.trialEndsAt,
+    this.cost,
+    this.trialCost,
+  });
 
   @override
   String toString() {
