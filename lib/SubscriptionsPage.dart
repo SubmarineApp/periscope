@@ -28,13 +28,13 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
     _init();
   }
 
-  _init() async {
+  Future _init() async {
     items = await client.subscriptionsGet();
     (await client.categoriesGet()).forEach((e) => {categories[e.id] = e});
     setState(() {});
   }
 
-  _updateSubscriptions() async {
+  Future _updateSubscriptions() async {
     items = await client.subscriptionsGet();
     setState(() {});
   }
@@ -121,9 +121,22 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
                   },
                 ),
                 TextButton(
-                  // TODO
                   child: Text('Modify'),
-                  onPressed: () {/** */},
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (BuildContext context) {
+                          return ModifySubscriptionForm(
+                            formKey: _formKey,
+                            client: client,
+                            categories: categories,
+                            subscription: selected.first,
+                          );
+                        },
+                      ),
+                    );
+                    setState(() {});
+                  },
                 ),
                 TextButton(
                   child: Text('Cancel'),
@@ -180,6 +193,263 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
                   )
                   .toList(),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class ModifySubscriptionForm extends StatefulWidget {
+  final DefaultApi client;
+  final GlobalKey<FormState> formKey;
+  final HashMap<int, Category> categories;
+  final Subscription subscription;
+
+  ModifySubscriptionForm(
+      {this.formKey, this.client, this.categories, this.subscription});
+
+  @override
+  _ModifySubscriptionFormState createState() => _ModifySubscriptionFormState(
+        formKey: this.formKey,
+        client: this.client,
+        categories: this.categories,
+        subscription: this.subscription,
+      );
+}
+
+class _ModifySubscriptionFormState extends State<ModifySubscriptionForm> {
+  final DefaultApi client;
+  final GlobalKey<FormState> formKey;
+  final HashMap<int, Category> categories;
+  final _titleController = TextEditingController();
+  final _regCostController = TextEditingController();
+  final _trialCostController = TextEditingController();
+  Map<String, int> _categoryReverseMap;
+  String _recurrence;
+  String _selectedCategoryTitle;
+  DateTime _startDate;
+  CurrencyInputFormatter _regCostCurrencyFormatter = CurrencyInputFormatter();
+  bool _isTrialSubscription = false;
+  DateTime _trialEndDate;
+  CurrencyInputFormatter _trialCostCurrencyFormatter = CurrencyInputFormatter();
+  Subscription subscription;
+
+  _ModifySubscriptionFormState(
+      {this.formKey, this.client, this.categories, this.subscription}) {
+    _categoryReverseMap = categories.map<String, int>(
+        (key, value) => MapEntry<String, int>(value.name, key));
+    _recurrence = subscription.recurrence;
+    _titleController.text = subscription.title;
+    _startDate = subscription.startsAt;
+    _trialEndDate = subscription.trialEndsAt;
+    _selectedCategoryTitle = categories[subscription.category].name;
+    NumberFormat f = NumberFormat("00", "en_US");
+    _regCostController.text =
+        "\$${subscription.cost / 100}.${f.format(subscription.cost % 100)}";
+    _trialCostController.text =
+        "\$${subscription.trialCost ?? 0 / 100}.${f.format(subscription.trialCost ?? 0 % 100)}";
+  }
+
+  @override
+  void dispose() {
+    // Clean up the controller when the widget is disposed.
+    _titleController.dispose();
+    _regCostController.dispose();
+    _trialCostController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // TODO: Fix formatting to look nice
+    return Scaffold(
+      appBar: AppBar(),
+      body: Form(
+        key: formKey,
+        child: Column(
+          children: <Widget>[
+            TextFormField(
+              controller: _titleController,
+              validator: (value) {
+                if (value.isEmpty) {
+                  return 'Please enter a title';
+                }
+                return null;
+              },
+              decoration: InputDecoration(
+                labelText: "Title",
+              ),
+            ),
+            TextFormField(
+              controller: _regCostController,
+              keyboardType: TextInputType.number,
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
+                _regCostCurrencyFormatter,
+              ],
+              validator: (value) {
+                if (value.isEmpty) {
+                  return 'Please enter a cost';
+                }
+                return null;
+              },
+              decoration: InputDecoration(
+                labelText: "Cost",
+              ),
+            ),
+            DropdownButton<String>(
+              value: _recurrence,
+              icon: Icon(Icons.arrow_downward),
+              iconSize: 24,
+              elevation: 16,
+              underline: Container(
+                height: 2,
+                color: Colors.blue,
+              ),
+              onChanged: (String newValue) {
+                setState(() {
+                  _recurrence = newValue;
+                });
+              },
+              items: <String>[
+                'weekly',
+                'monthly',
+                'yearly',
+              ].map<DropdownMenuItem<String>>((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(value),
+                );
+              }).toList(),
+            ),
+            DropdownButton<String>(
+              value: _selectedCategoryTitle,
+              icon: Icon(Icons.arrow_downward),
+              iconSize: 24,
+              elevation: 16,
+              underline: Container(
+                height: 2,
+                color: Colors.blue,
+              ),
+              onChanged: (String newValue) {
+                setState(() {
+                  _selectedCategoryTitle = newValue;
+                });
+              },
+              items: categories.values
+                  .map<DropdownMenuItem<String>>(
+                      (v) => DropdownMenuItem<String>(
+                            value: v.name,
+                            child: Text(v.name),
+                          ))
+                  .toList(),
+            ),
+            Text("Start Date"),
+            Row(
+              children: <Widget>[
+                Text("${DateFormat.yMMMMd('en_US').format(_startDate)}"),
+                ElevatedButton(
+                  onPressed: () async {
+                    _startDate = await showDatePicker(
+                      context: context,
+                      initialDate: DateTime.now(),
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2025),
+                    );
+                    setState(() {});
+                  },
+                  child: Icon(Icons.calendar_today),
+                ),
+              ],
+            ),
+            Row(
+              children: <Widget>[
+                Text("Trial Period?"),
+                Checkbox(
+                  value: _isTrialSubscription,
+                  onChanged: (value) {
+                    setState(() {
+                      _isTrialSubscription = value;
+                    });
+                  },
+                ),
+              ],
+            ),
+            Visibility(
+              visible: _isTrialSubscription,
+              child: Column(
+                children: <Widget>[
+                  Text("Trial End Date"),
+                  Row(
+                    children: <Widget>[
+                      Text("${DateFormat.yMMMMd('en_US').format(_startDate)}"),
+                      ElevatedButton(
+                        onPressed: () async {
+                          _trialEndDate = await showDatePicker(
+                            context: context,
+                            initialDate: DateTime.now(),
+                            firstDate: DateTime(2000),
+                            lastDate: DateTime(2025),
+                          );
+                          setState(() {});
+                        },
+                        child: Icon(Icons.calendar_today),
+                      ),
+                    ],
+                  ),
+                  TextFormField(
+                    controller: _trialCostController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
+                      _trialCostCurrencyFormatter,
+                    ],
+                    validator: (value) {
+                      if (value.isEmpty) {
+                        return 'Please enter a cost';
+                      }
+                      return null;
+                    },
+                    decoration: InputDecoration(
+                      labelText: "Trial Cost",
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                // Validate returns true if the form is valid, otherwise false.
+                if (formKey.currentState.validate()) {
+                  // If the form is valid, display a snackbar. In the real world,
+                  // you'd often call a server or save the information in a database.
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Creating Subscription...')));
+
+                  try {
+                    await client.subscriptionsIdPatch(
+                        subscription.id,
+                        Subscription(
+                          title: _titleController.text,
+                          category: _categoryReverseMap[_selectedCategoryTitle],
+                          recurrence: _recurrence,
+                          startsAt: _startDate,
+                          cost: _regCostCurrencyFormatter
+                              .getUnformattedInputAsInt(),
+                          trialEndsAt: _trialEndDate,
+                          trialCost: _trialCostCurrencyFormatter
+                              .getUnformattedInputAsInt(),
+                        ));
+                  } catch (e) {
+                    debugPrint(e);
+                  }
+                  Navigator.of(context).pop();
+                }
+              },
+              child: Text('Submit'),
+            )
           ],
         ),
       ),
