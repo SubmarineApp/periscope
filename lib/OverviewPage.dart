@@ -2,6 +2,7 @@ import 'dart:collection';
 
 import 'package:backend_api/api.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 import 'package:jiffy/jiffy.dart';
 
@@ -141,6 +142,8 @@ class _OverviewPageState extends State<OverviewPage> {
             ]),
         SfCartesianChart(
           primaryXAxis: DateTimeAxis(),
+          primaryYAxis:
+              NumericAxis(numberFormat: NumberFormat.simpleCurrency()),
           title: ChartTitle(text: "Total Spending by Month"),
           legend: Legend(isVisible: true, position: LegendPosition.bottom),
           series: <ChartSeries>[

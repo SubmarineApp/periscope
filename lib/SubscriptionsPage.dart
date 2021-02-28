@@ -4,15 +4,52 @@ import 'package:flutter/material.dart';
 import 'package:backend_api/api.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:syncfusion_flutter_datagrid/datagrid.dart';
 
 class SubscriptionsPage extends StatefulWidget {
   final DefaultApi client;
+  List<Subscription> items = <Subscription>[];
+  HashMap<int, Category> categories = HashMap<int, Category>();
 
-  SubscriptionsPage({this.client});
+  SubscriptionsPage({this.client, this.items, this.categories});
 
   @override
-  _SubscriptionsPageState createState() =>
-      _SubscriptionsPageState(client: this.client);
+  _SubscriptionsPageState createState() => _SubscriptionsPageState(
+      client: this.client, items: this.items, categories: this.categories);
+}
+
+class _SubscriptionDataSource extends DataGridSource<Subscription> {
+  final List<Subscription> subscriptions;
+  final HashMap<int, Category> categories;
+
+  @override
+  List<Subscription> get dataSource => subscriptions;
+
+  _SubscriptionDataSource({this.subscriptions, this.categories});
+
+  @override
+  getValue(Subscription subscription, String columnName) {
+    switch (columnName) {
+      case 'id':
+        return subscription.id;
+      case 'title':
+        return subscription.title;
+      case 'category':
+        return categories[subscription.category].name;
+      case 'cost':
+        return subscription.cost;
+      case 'starts_at':
+        return subscription.startsAt;
+      case 'recurrence':
+        return subscription.recurrence;
+      default:
+        return ' ';
+    }
+  }
+
+  void updateDataSource() {
+    notifyListeners();
+  }
 }
 
 class _SubscriptionsPageState extends State<SubscriptionsPage> {
@@ -23,8 +60,11 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
   bool sort = false;
   final formatCurrency = new NumberFormat.simpleCurrency();
   final _formKey = GlobalKey<FormState>();
+  _SubscriptionDataSource _subscriptionDataSource;
 
-  _SubscriptionsPageState({this.client}) {
+  _SubscriptionsPageState({this.client, this.items, this.categories}) {
+    this._subscriptionDataSource =
+        _SubscriptionDataSource(categories: categories, subscriptions: items);
     _init();
   }
 
@@ -36,6 +76,7 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
 
   Future _updateSubscriptions() async {
     items = await client.subscriptionsGet();
+    _subscriptionDataSource.updateDataSource();
     setState(() {});
   }
 
@@ -94,109 +135,73 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.vertical,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Column(
-          children: <Widget>[
-            ButtonBar(
-              alignment: MainAxisAlignment.start,
-              children: <Widget>[
-                TextButton(
-                  child: Text('Add'),
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (BuildContext context) {
-                          return AddSubscriptionForm(
-                            formKey: _formKey,
-                            client: client,
-                            categories: categories,
-                          );
-                        },
-                      ),
-                    );
-                    setState(() {});
-                  },
-                ),
-                TextButton(
-                  child: Text('Modify'),
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (BuildContext context) {
-                          return ModifySubscriptionForm(
-                            formKey: _formKey,
-                            client: client,
-                            categories: categories,
-                            subscription: selected.first,
-                          );
-                        },
-                      ),
-                    );
-                    setState(() {});
-                  },
-                ),
-                TextButton(
-                  child: Text('Cancel'),
-                  onPressed: () {
-                    this._confirmCancelation();
-                  },
-                ),
+    return LayoutBuilder(builder: (context, constraints) {
+      return Column(
+        children: <Widget>[
+          ButtonBar(
+            alignment: MainAxisAlignment.start,
+            children: <Widget>[
+              TextButton(
+                child: Text('Add'),
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (BuildContext context) {
+                        return AddSubscriptionForm(
+                          formKey: _formKey,
+                          client: client,
+                          categories: categories,
+                        );
+                      },
+                    ),
+                  );
+                  setState(() {});
+                },
+              ),
+              TextButton(
+                child: Text('Modify'),
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (BuildContext context) {
+                        return ModifySubscriptionForm(
+                          formKey: _formKey,
+                          client: client,
+                          categories: categories,
+                          subscription: selected.first,
+                        );
+                      },
+                    ),
+                  );
+                  setState(() {});
+                },
+              ),
+              TextButton(
+                child: Text('Cancel'),
+                onPressed: () {
+                  this._confirmCancelation();
+                },
+              ),
+            ],
+          ),
+          Container(
+            height: constraints.maxHeight - 44,
+            child: SfDataGrid(
+              source: _subscriptionDataSource,
+              columnWidthMode: ColumnWidthMode.fill,
+              columns: <GridColumn>[
+                GridTextColumn(headerText: 'Title', mappingName: 'title'),
+                GridTextColumn(headerText: 'Category', mappingName: 'category'),
+                GridNumericColumn(
+                    headerText: 'Monthly Cost', mappingName: 'cost'),
+                GridTextColumn(
+                    headerText: 'Recurrence', mappingName: 'recurrence'),
               ],
             ),
-            DataTable(
-              columns: <DataColumn>[
-                DataColumn(
-                    label: Text('Title'),
-                    numeric: false,
-                    onSort: (columnIndex, ascending) {
-                      setState(() {
-                        sort = !sort;
-                      });
-                      onSortColum(columnIndex, ascending);
-                    }),
-                DataColumn(
-                  label: Text('Description'),
-                  numeric: false,
-                ),
-                DataColumn(
-                  label: Text('Cost'),
-                  numeric: true,
-                ),
-                DataColumn(
-                  label: Text('Recurrence'),
-                  numeric: false,
-                ),
-              ],
-              rows: items
-                  .map(
-                    (item) => DataRow(
-                        selected: selected.contains(item),
-                        cells: [
-                          DataCell(Text(item.title)),
-                          DataCell(Text(categories[item.category].name)),
-                          DataCell(
-                              Text(formatCurrency.format(item.cost / 100.0))),
-                          DataCell(Text(item.recurrence))
-                        ],
-                        onSelectChanged: (bool value) {
-                          setState(() {
-                            if (value) {
-                              selected.add(item);
-                            } else {
-                              selected.remove(item);
-                            }
-                          });
-                        }),
-                  )
-                  .toList(),
-            ),
-          ],
-        ),
-      ),
-    );
+          ),
+        ],
+      );
+    });
   }
 }
 

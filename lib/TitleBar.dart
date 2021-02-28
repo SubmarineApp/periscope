@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import 'package:backend_api/api.dart';
 import 'package:flutter/material.dart';
 import 'package:submarine/CalendarPage.dart';
@@ -15,8 +17,18 @@ class TitleBar extends StatefulWidget {
 
 class _TitleBarState extends State<TitleBar> {
   final DefaultApi client;
+  List<Subscription> items = <Subscription>[];
+  HashMap<int, Category> categories = HashMap<int, Category>();
 
-  _TitleBarState({this.client});
+  _TitleBarState({this.client}) {
+    _init();
+  }
+
+  _init() async {
+    items = await client.subscriptionsGet();
+    (await client.categoriesGet()).forEach((e) => {categories[e.id] = e});
+    setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -55,6 +67,8 @@ class _TitleBarState extends State<TitleBar> {
             ),
             CalendarPage(),
             SubscriptionsPage(
+              items: this.items,
+              categories: this.categories,
               client: this.client,
             ),
           ],
