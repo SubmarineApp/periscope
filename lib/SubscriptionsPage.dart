@@ -56,7 +56,7 @@ class _SubscriptionDataSource extends DataGridSource<Subscription> {
 
 class _SubscriptionsPageState extends State<SubscriptionsPage> {
   final DefaultApi client;
-  final List<Subscription> subscriptions;
+  List<Subscription> subscriptions;
   final HashMap<int, Category> categories;
   Set<Subscription> _selected = Set<Subscription>();
   final _formKey = GlobalKey<FormState>();
@@ -66,12 +66,6 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
     this._subscriptionDataSource = _SubscriptionDataSource(
         categories: categories, subscriptions: subscriptions);
   }
-
-  // Future _updateSubscriptions() async {
-  //   subscriptions = await client.subscriptionsGet();
-  //   _subscriptionDataSource.updateDataSource();
-  //   setState(() {});
-  // }
 
   Future<void> _confirmCancelation() async {
     return showDialog<void>(
@@ -101,6 +95,7 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
                     }
                   });
                   Navigator.of(context).pop();
+                  // TODO: Update parent's list of subscriptions
                   // _updateSubscriptions();
                 }),
             TextButton(
