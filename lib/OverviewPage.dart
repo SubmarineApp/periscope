@@ -69,9 +69,13 @@ class _OverviewPageState extends State<OverviewPage> {
     items = await client.subscriptionsGet();
     (await client.categoriesGet()).forEach((e) => {categories[e.id] = e});
     items.forEach((element) {
+      var recurrenceCost = element.cost;
+      if (element.recurrence == "weekly")
+        recurrenceCost *= 4;
+      else if (element.recurrence == "yearly") recurrenceCost ~/= 12;
       tempSpending[element.category] =
-          (tempSpending[element.category] ?? 0) + element.cost;
-      totalSpending += element.cost;
+          (tempSpending[element.category] ?? 0) + recurrenceCost;
+      totalSpending += recurrenceCost;
     });
     tempSpending.forEach((category, amount) {
       categorySpendingThisMonth.add(CategoryMonthlyPctAccumulator(
@@ -126,7 +130,7 @@ class _OverviewPageState extends State<OverviewPage> {
         SfCircularChart(
             title: ChartTitle(text: "Monthly Spending by Category"),
             series: <CircularSeries>[
-              DoughnutSeries<CategoryMonthlyPctAccumulator, String>(
+              PieSeries<CategoryMonthlyPctAccumulator, String>(
                   dataSource: categorySpendingThisMonth,
                   xValueMapper: (data, _) => data.categoryName,
                   yValueMapper: (data, _) => data.amount,
