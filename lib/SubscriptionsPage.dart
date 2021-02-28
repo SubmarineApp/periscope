@@ -39,7 +39,7 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
     setState(() {});
   }
 
-  Future<void> _confirmRemoval() async {
+  Future<void> _confirmCancelation() async {
     return showDialog<void>(
       context: context,
       barrierDismissible: false, // user must tap button!
@@ -50,7 +50,7 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
             child: ListBody(
               children: <Widget>[
                 Text(
-                    'Are you sure you want to remove ${selected.length} Subscriptions?'),
+                    'Are you sure you want to Cancel ${selected.length} Subscriptions?'),
               ],
             ),
           ),
@@ -60,7 +60,8 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
                 onPressed: () {
                   selected.forEach((element) {
                     try {
-                      client.subscriptionsIdDelete(element.id);
+                      element.endsAt = DateTime.now();
+                      client.subscriptionsIdPatch(element.id, element);
                     } catch (e) {
                       debugPrint(e);
                     }
@@ -80,6 +81,7 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
     );
   }
 
+  // TODO: Implement sorting
   onSortColum(int columnIndex, bool ascending) {
     if (columnIndex == 0) {
       if (ascending) {
@@ -124,10 +126,9 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
                   onPressed: () {/** */},
                 ),
                 TextButton(
-                  child: Text('Remove'),
+                  child: Text('Cancel'),
                   onPressed: () {
-                    // Change to setting ends at date
-                    this._confirmRemoval();
+                    this._confirmCancelation();
                   },
                 ),
               ],
@@ -202,32 +203,36 @@ class _AddSubscriptionFormState extends State<AddSubscriptionForm> {
   final DefaultApi client;
   final GlobalKey<FormState> formKey;
   final HashMap<int, Category> categories;
-  final titleController = TextEditingController();
-  final costController = TextEditingController();
+  final _titleController = TextEditingController();
+  final _regCostController = TextEditingController(text: "\$0.00");
+  final _trialCostController = TextEditingController(text: "\$0.00");
   Map<String, int> _categoryReverseMap;
-  String recurrence = 'weekly';
-  String selectedCategoryTitle;
+  String _recurrence = 'weekly';
+  String _selectedCategoryTitle;
   DateTime _startDate = DateTime.now();
-  CurrencyInputFormatter currencyFormatter = CurrencyInputFormatter();
+  CurrencyInputFormatter _regCostCurrencyFormatter = CurrencyInputFormatter();
+  bool _isTrialSubscription = false;
+  DateTime _trialEndDate = DateTime.now();
+  CurrencyInputFormatter _trialCostCurrencyFormatter = CurrencyInputFormatter();
 
   _AddSubscriptionFormState({this.formKey, this.client, this.categories}) {
     _categoryReverseMap = categories.map<String, int>(
         (key, value) => MapEntry<String, int>(value.name, key));
-    selectedCategoryTitle = categories[categories.keys.first].name;
+    _selectedCategoryTitle = categories[categories.keys.first].name;
   }
 
   @override
   void dispose() {
     // Clean up the controller when the widget is disposed.
-    titleController.dispose();
-    costController.dispose();
+    _titleController.dispose();
+    _regCostController.dispose();
+    _trialCostController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     // TODO: Fix formatting to look nice
-    // TODO: Add trial form entries
     return Scaffold(
       appBar: AppBar(),
       body: Form(
@@ -235,7 +240,7 @@ class _AddSubscriptionFormState extends State<AddSubscriptionForm> {
         child: Column(
           children: <Widget>[
             TextFormField(
-              controller: titleController,
+              controller: _titleController,
               validator: (value) {
                 if (value.isEmpty) {
                   return 'Please enter a title';
@@ -247,11 +252,11 @@ class _AddSubscriptionFormState extends State<AddSubscriptionForm> {
               ),
             ),
             TextFormField(
-              controller: costController,
+              controller: _regCostController,
               keyboardType: TextInputType.number,
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
-                currencyFormatter,
+                _regCostCurrencyFormatter,
               ],
               validator: (value) {
                 if (value.isEmpty) {
@@ -264,7 +269,7 @@ class _AddSubscriptionFormState extends State<AddSubscriptionForm> {
               ),
             ),
             DropdownButton<String>(
-              value: recurrence,
+              value: _recurrence,
               icon: Icon(Icons.arrow_downward),
               iconSize: 24,
               elevation: 16,
@@ -274,7 +279,7 @@ class _AddSubscriptionFormState extends State<AddSubscriptionForm> {
               ),
               onChanged: (String newValue) {
                 setState(() {
-                  recurrence = newValue;
+                  _recurrence = newValue;
                 });
               },
               items: <String>[
@@ -289,7 +294,7 @@ class _AddSubscriptionFormState extends State<AddSubscriptionForm> {
               }).toList(),
             ),
             DropdownButton<String>(
-              value: selectedCategoryTitle,
+              value: _selectedCategoryTitle,
               icon: Icon(Icons.arrow_downward),
               iconSize: 24,
               elevation: 16,
@@ -299,7 +304,7 @@ class _AddSubscriptionFormState extends State<AddSubscriptionForm> {
               ),
               onChanged: (String newValue) {
                 setState(() {
-                  selectedCategoryTitle = newValue;
+                  _selectedCategoryTitle = newValue;
                 });
               },
               items: categories.values
@@ -328,6 +333,61 @@ class _AddSubscriptionFormState extends State<AddSubscriptionForm> {
                 ),
               ],
             ),
+            Row(
+              children: <Widget>[
+                Text("Trial Period?"),
+                Checkbox(
+                  value: _isTrialSubscription,
+                  onChanged: (value) {
+                    setState(() {
+                      _isTrialSubscription = value;
+                    });
+                  },
+                ),
+              ],
+            ),
+            Visibility(
+              visible: _isTrialSubscription,
+              child: Column(
+                children: <Widget>[
+                  Text("Trial End Date"),
+                  Row(
+                    children: <Widget>[
+                      Text("${DateFormat.yMMMMd('en_US').format(_startDate)}"),
+                      ElevatedButton(
+                        onPressed: () async {
+                          _trialEndDate = await showDatePicker(
+                            context: context,
+                            initialDate: DateTime.now(),
+                            firstDate: DateTime(2000),
+                            lastDate: DateTime(2025),
+                          );
+                          setState(() {});
+                        },
+                        child: Icon(Icons.calendar_today),
+                      ),
+                    ],
+                  ),
+                  TextFormField(
+                    controller: _trialCostController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
+                      _trialCostCurrencyFormatter,
+                    ],
+                    validator: (value) {
+                      if (value.isEmpty) {
+                        return 'Please enter a cost';
+                      }
+                      return null;
+                    },
+                    decoration: InputDecoration(
+                      labelText: "Trial Cost",
+                    ),
+                  ),
+                ],
+              ),
+            ),
             ElevatedButton(
               onPressed: () async {
                 // Validate returns true if the form is valid, otherwise false.
@@ -341,11 +401,15 @@ class _AddSubscriptionFormState extends State<AddSubscriptionForm> {
                   try {
                     await client.subscriptionsPost(
                         subscription: Subscription(
-                      title: titleController.text,
-                      category: _categoryReverseMap[selectedCategoryTitle],
-                      recurrence: recurrence,
+                      title: _titleController.text,
+                      category: _categoryReverseMap[_selectedCategoryTitle],
+                      recurrence: _recurrence,
                       startsAt: _startDate,
-                      cost: currencyFormatter.getUnformattedInputAsInt(),
+                      cost:
+                          _regCostCurrencyFormatter.getUnformattedInputAsInt(),
+                      trialEndsAt: _trialEndDate,
+                      trialCost: _trialCostCurrencyFormatter
+                          .getUnformattedInputAsInt(),
                     ));
                   } catch (e) {
                     debugPrint(e);
