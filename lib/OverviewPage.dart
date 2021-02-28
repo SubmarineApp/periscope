@@ -126,7 +126,6 @@ class _OverviewPageState extends State<OverviewPage> {
             child: GridView.count(
       crossAxisCount: 2,
       children: [
-        // TODO: weight cost based on frequency
         SfCircularChart(
             title: ChartTitle(text: "Monthly Spending by Category"),
             series: <CircularSeries>[

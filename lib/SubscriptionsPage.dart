@@ -101,7 +101,6 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
             ButtonBar(
               alignment: MainAxisAlignment.start,
               children: <Widget>[
-                // TODO: Create form for adding a new subscription
                 TextButton(
                   child: Text('Add'),
                   onPressed: () {
