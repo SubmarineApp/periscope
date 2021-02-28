@@ -37,7 +37,7 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
     setState(() {});
   }
 
-  Future<void> _showMyDialog() async {
+  Future<void> _confirmRemoval() async {
     return showDialog<void>(
       context: context,
       barrierDismissible: false, // user must tap button!
@@ -124,7 +124,7 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
                 TextButton(
                   child: Text('Remove'),
                   onPressed: () {
-                    this._showMyDialog();
+                    this._confirmRemoval();
                   },
                 ),
               ],
