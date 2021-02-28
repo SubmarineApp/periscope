@@ -8,14 +8,16 @@ import 'package:syncfusion_flutter_datagrid/datagrid.dart';
 
 class SubscriptionsPage extends StatefulWidget {
   final DefaultApi client;
-  List<Subscription> items = <Subscription>[];
-  HashMap<int, Category> categories = HashMap<int, Category>();
+  final List<Subscription> subscriptions;
+  final HashMap<int, Category> categories;
 
-  SubscriptionsPage({this.client, this.items, this.categories});
+  SubscriptionsPage({this.client, this.subscriptions, this.categories});
 
   @override
   _SubscriptionsPageState createState() => _SubscriptionsPageState(
-      client: this.client, items: this.items, categories: this.categories);
+      client: this.client,
+      subscriptions: this.subscriptions,
+      categories: this.categories);
 }
 
 class _SubscriptionDataSource extends DataGridSource<Subscription> {
@@ -37,7 +39,7 @@ class _SubscriptionDataSource extends DataGridSource<Subscription> {
       case 'category':
         return categories[subscription.category].name;
       case 'cost':
-        return subscription.cost;
+        return subscription.cost / 100.0;
       case 'starts_at':
         return subscription.startsAt;
       case 'recurrence':
@@ -54,31 +56,22 @@ class _SubscriptionDataSource extends DataGridSource<Subscription> {
 
 class _SubscriptionsPageState extends State<SubscriptionsPage> {
   final DefaultApi client;
-  List<Subscription> items = <Subscription>[];
-  HashMap<int, Category> categories = HashMap<int, Category>();
-  Set<Subscription> selected = Set<Subscription>();
-  bool sort = false;
-  final formatCurrency = new NumberFormat.simpleCurrency();
+  final List<Subscription> subscriptions;
+  final HashMap<int, Category> categories;
+  Set<Subscription> _selected = Set<Subscription>();
   final _formKey = GlobalKey<FormState>();
   _SubscriptionDataSource _subscriptionDataSource;
 
-  _SubscriptionsPageState({this.client, this.items, this.categories}) {
-    this._subscriptionDataSource =
-        _SubscriptionDataSource(categories: categories, subscriptions: items);
-    _init();
+  _SubscriptionsPageState({this.client, this.subscriptions, this.categories}) {
+    this._subscriptionDataSource = _SubscriptionDataSource(
+        categories: categories, subscriptions: subscriptions);
   }
 
-  Future _init() async {
-    items = await client.subscriptionsGet();
-    (await client.categoriesGet()).forEach((e) => {categories[e.id] = e});
-    setState(() {});
-  }
-
-  Future _updateSubscriptions() async {
-    items = await client.subscriptionsGet();
-    _subscriptionDataSource.updateDataSource();
-    setState(() {});
-  }
+  // Future _updateSubscriptions() async {
+  //   subscriptions = await client.subscriptionsGet();
+  //   _subscriptionDataSource.updateDataSource();
+  //   setState(() {});
+  // }
 
   Future<void> _confirmCancelation() async {
     return showDialog<void>(
@@ -91,7 +84,7 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
             child: ListBody(
               children: <Widget>[
                 Text(
-                    'Are you sure you want to Cancel ${selected.length} Subscriptions?'),
+                    'Are you sure you want to Cancel ${_selected.length} Subscriptions?'),
               ],
             ),
           ),
@@ -99,7 +92,7 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
             TextButton(
                 child: Text('Yes'),
                 onPressed: () {
-                  selected.forEach((element) {
+                  _selected.forEach((element) {
                     try {
                       element.endsAt = DateTime.now();
                       client.subscriptionsIdPatch(element.id, element);
@@ -108,7 +101,7 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
                     }
                   });
                   Navigator.of(context).pop();
-                  _updateSubscriptions();
+                  // _updateSubscriptions();
                 }),
             TextButton(
               child: Text('No'),
@@ -126,9 +119,9 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
   onSortColum(int columnIndex, bool ascending) {
     if (columnIndex == 0) {
       if (ascending) {
-        items.sort((a, b) => a.title.compareTo(b.title));
+        subscriptions.sort((a, b) => a.title.compareTo(b.title));
       } else {
-        items.sort((a, b) => b.title.compareTo(a.title));
+        subscriptions.sort((a, b) => b.title.compareTo(a.title));
       }
     }
   }
@@ -161,19 +154,21 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
               TextButton(
                 child: Text('Modify'),
                 onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (BuildContext context) {
-                        return ModifySubscriptionForm(
-                          formKey: _formKey,
-                          client: client,
-                          categories: categories,
-                          subscription: selected.first,
-                        );
-                      },
-                    ),
-                  );
-                  setState(() {});
+                  if (_selected.first != null) {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (BuildContext context) {
+                          return ModifySubscriptionForm(
+                            formKey: _formKey,
+                            client: client,
+                            categories: categories,
+                            subscription: _selected.first,
+                          );
+                        },
+                      ),
+                    );
+                    setState(() {});
+                  }
                 },
               ),
               TextButton(
@@ -189,13 +184,30 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
             child: SfDataGrid(
               source: _subscriptionDataSource,
               columnWidthMode: ColumnWidthMode.fill,
+              allowSorting: true,
+              allowMultiColumnSorting: true,
               columns: <GridColumn>[
-                GridTextColumn(headerText: 'Title', mappingName: 'title'),
-                GridTextColumn(headerText: 'Category', mappingName: 'category'),
-                GridNumericColumn(
-                    headerText: 'Monthly Cost', mappingName: 'cost'),
                 GridTextColumn(
-                    headerText: 'Recurrence', mappingName: 'recurrence'),
+                  headerText: 'Title',
+                  mappingName: 'title',
+                  allowSorting: true,
+                ),
+                GridTextColumn(
+                  headerText: 'Category',
+                  mappingName: 'category',
+                  allowSorting: true,
+                ),
+                GridNumericColumn(
+                  headerText: 'Monthly Cost',
+                  mappingName: 'cost',
+                  numberFormat: NumberFormat.simpleCurrency(),
+                  allowSorting: true,
+                ),
+                GridTextColumn(
+                  headerText: 'Recurrence',
+                  mappingName: 'recurrence',
+                  allowSorting: true,
+                ),
               ],
             ),
           ),

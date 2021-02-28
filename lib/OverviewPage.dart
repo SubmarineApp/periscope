@@ -8,24 +8,29 @@ import 'package:jiffy/jiffy.dart';
 
 class OverviewPage extends StatefulWidget {
   final DefaultApi client;
+  final List<Subscription> subscriptions;
+  final HashMap<int, Category> categories;
 
-  OverviewPage({this.client});
+  OverviewPage({this.client, this.subscriptions, this.categories});
 
   @override
-  _OverviewPageState createState() => _OverviewPageState(client: this.client);
+  _OverviewPageState createState() => _OverviewPageState(
+      client: this.client,
+      subscriptions: this.subscriptions,
+      categories: this.categories);
 }
 
 class _OverviewPageState extends State<OverviewPage> {
   final DefaultApi client;
-  List<Subscription> items = <Subscription>[];
-  HashMap<int, Category> categories = HashMap<int, Category>();
+  List<Subscription> subscriptions;
+  final HashMap<int, Category> categories;
   List<CategoryMonthlyPctAccumulator> categorySpendingThisMonth =
       <CategoryMonthlyPctAccumulator>[];
   List<MonthlySpendingAccumulator> monthlySpending = [];
   HashMap<Category, List<MonthlySpendingAccumulator>> categoryMonthlySpending =
       new HashMap<Category, List<MonthlySpendingAccumulator>>();
 
-  _OverviewPageState({this.client}) {
+  _OverviewPageState({this.client, this.subscriptions, this.categories}) {
     _init();
   }
 
@@ -67,9 +72,9 @@ class _OverviewPageState extends State<OverviewPage> {
     // ... eh. Must be nothing.
     HashMap<int, int> tempSpending = HashMap<int, int>();
     int totalSpending = 0;
-    items = await client.subscriptionsGet();
+    subscriptions = await client.subscriptionsGet();
     (await client.categoriesGet()).forEach((e) => {categories[e.id] = e});
-    items.forEach((element) {
+    subscriptions.forEach((element) {
       var recurrenceCost = element.cost;
       if (element.recurrence == "weekly")
         recurrenceCost *= 4;
@@ -88,7 +93,7 @@ class _OverviewPageState extends State<OverviewPage> {
     HashMap<Category, HashMap<DateTime, int>> spendingPerCategoryPerMonth =
         new HashMap<Category, HashMap<DateTime, int>>();
     var subsStartedPriorToNow =
-        items.where((element) => element.startsAt.isBefore(now));
+        subscriptions.where((element) => element.startsAt.isBefore(now));
     subsStartedPriorToNow.forEach((sub) {
       for (int i = -6; i < 7; i++) {
         var startOfMonth =
