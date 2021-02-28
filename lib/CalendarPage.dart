@@ -1,15 +1,26 @@
+import 'dart:collection';
+
 import 'package:flutter/material.dart';
 import 'package:backend_api/api.dart';
-import 'package:submarine/SubscriptionsPage.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 
 class CalendarPage extends StatefulWidget {
   final DefaultApi client;
+  final List<Subscription> subscriptions;
+  final HashMap<int, Category> categories;
 
-  CalendarPage({this.client});
+  CalendarPage({
+    this.client,
+    this.subscriptions,
+    this.categories,
+  });
 
   @override
-  _CalendarPageState createState() => _CalendarPageState(client: this.client);
+  _CalendarPageState createState() => _CalendarPageState(
+        client: this.client,
+        subscriptions: this.subscriptions,
+        categories: this.categories,
+      );
 }
 
 class _CalendarPageState extends State<CalendarPage> {
@@ -19,7 +30,11 @@ class _CalendarPageState extends State<CalendarPage> {
 
   //
 
-  _CalendarPageState({this.client}) {
+  _CalendarPageState({
+    this.client,
+    this.subscriptions,
+    this.categories,
+  }) {
     _init();
   }
 
@@ -32,28 +47,51 @@ class _CalendarPageState extends State<CalendarPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SfCalendar(
-        view: CalendarView.month,
-        todayHighlightColor: Colors.redAccent.shade100,
-        showNavigationArrow: true,
-        dataSource: EventDataSource(_getDataSource()),
-        monthViewSettings: MonthViewSettings(
-            appointmentDisplayMode: MonthAppointmentDisplayMode.appointment),
-      ),
-    );
+        body: Container(
+            child: SfCalendar(
+      view: CalendarView.month,
+      todayHighlightColor: Colors.redAccent.shade100,
+      showNavigationArrow: true,
+      monthViewSettings: MonthViewSettings(
+          appointmentDisplayMode: MonthAppointmentDisplayMode.appointment,
+          showAgenda: true,
+          agendaStyle: AgendaStyle(
+            backgroundColor: Colors.grey.shade50,
+            appointmentTextStyle: TextStyle(
+                fontSize: 14,
+                fontStyle: FontStyle.normal,
+                color: Colors.grey.shade900),
+            dateTextStyle: TextStyle(
+                fontStyle: FontStyle.normal,
+                fontSize: 12,
+                fontWeight: FontWeight.w300,
+                color: Colors.grey.shade900),
+            dayTextStyle: TextStyle(
+                fontStyle: FontStyle.normal,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: Colors.grey.shade900),
+          )),
+      dataSource: EventDataSource(_getDataSource()),
+    )));
   }
 }
 
 List<Event> _getDataSource() {
-  //PARAMETERS
   List<Event> events = <Event>[];
-  final DateTime today = DateTime.now();
-  final DateTime startTime =
-      //get start date of subscription
-      DateTime(today.year, today.month, today.day, 9, 0, 0);
-  final DateTime endTime = startTime.add(const Duration(hours: 2));
-  events.add(
-      Event('Conference', startTime, endTime, const Color(0xFF0F8644), false));
+  items.foreach((e) {
+    final DateTime today = DateTime.now();
+    final DateTime startTime = e.startTime;
+    final DateTime endTime = startTime.add(const Duration(hours: 2));
+    final double cost = e.cost;
+    events.add(Event(
+        eventName: e.title,
+        from: startTime,
+        to: endTime,
+        background: const Color(0xFF0F8644),
+        isAllDay: true,
+        cost: cost));
+  });
   return events;
 }
 
@@ -89,16 +127,28 @@ class EventDataSource extends CalendarDataSource {
   bool isAllDay(int index) {
     return appointments[index].isAllDay;
   }
+
+  @override
+  String getNotes(int index) {
+    return appointments[index].cost;
+  }
 }
 
 //Event class containing properties to hold information about the event data
 class Event {
-  //Create an event with required details
-  Event(this.eventName, this.from, this.to, this.background, this.isAllDay);
-
   String eventName;
   DateTime from;
   DateTime to;
   Color background;
   bool isAllDay;
+  double cost;
+
+  //Create an event with required details
+  Event(
+      {this.eventName,
+      this.from,
+      this.to,
+      this.background,
+      this.isAllDay,
+      this.cost});
 }
