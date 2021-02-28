@@ -68,9 +68,9 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
   final DefaultApi client;
   List<Subscription> subscriptions;
   final HashMap<int, Category> categories;
-  Set<Subscription> _selected = Set<Subscription>();
   final _formKey = GlobalKey<FormState>();
   _SubscriptionDataSource _subscriptionDataSource;
+  final DataGridController _dataGridController = DataGridController();
 
   _SubscriptionsPageState({this.client, this.subscriptions, this.categories}) {
     this._subscriptionDataSource = _SubscriptionDataSource(
@@ -87,8 +87,7 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
           content: SingleChildScrollView(
             child: ListBody(
               children: <Widget>[
-                Text(
-                    'Are you sure you want to Cancel ${_selected.length} Subscriptions?'),
+                Text('Are you sure you want to Cancel this Subscription?'),
               ],
             ),
           ),
@@ -96,14 +95,13 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
             TextButton(
                 child: Text('Yes'),
                 onPressed: () {
-                  _selected.forEach((element) {
-                    try {
-                      element.endsAt = DateTime.now();
-                      client.subscriptionsIdPatch(element.id, element);
-                    } catch (e) {
-                      debugPrint(e);
-                    }
-                  });
+                  Subscription sub = this._dataGridController.selectedRow;
+                  try {
+                    sub.endsAt = DateTime.now();
+                    client.subscriptionsIdPatch(sub.id, sub);
+                  } catch (e) {
+                    debugPrint(e);
+                  }
                   Navigator.of(context).pop();
                   // TODO: Update parent's list of subscriptions
                   // _updateSubscriptions();
@@ -148,7 +146,8 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
               TextButton(
                 child: Text('Modify'),
                 onPressed: () {
-                  if (_selected.first != null) {
+                  Subscription sub = this._dataGridController.selectedRow;
+                  if (sub != null) {
                     Navigator.of(context).push(
                       MaterialPageRoute<void>(
                         builder: (BuildContext context) {
@@ -156,19 +155,27 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
                             formKey: _formKey,
                             client: client,
                             categories: categories,
-                            subscription: _selected.first,
+                            subscription: sub,
                           );
                         },
                       ),
                     );
                     setState(() {});
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text('A row must be selected first.')));
                   }
                 },
               ),
               TextButton(
                 child: Text('Cancel'),
                 onPressed: () {
-                  this._confirmCancelation();
+                  if (this._dataGridController.selectedRow != null) {
+                    this._confirmCancelation();
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text('A row must be selected first.')));
+                  }
                 },
               ),
             ],
@@ -177,9 +184,11 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
             height: constraints.maxHeight - 44,
             child: SfDataGrid(
               source: _subscriptionDataSource,
+              controller: this._dataGridController,
               columnWidthMode: ColumnWidthMode.fill,
               allowSorting: true,
               allowMultiColumnSorting: true,
+              selectionMode: SelectionMode.single,
               columns: <GridColumn>[
                 GridTextColumn(
                   headerText: 'Title',
@@ -263,9 +272,9 @@ class _ModifySubscriptionFormState extends State<ModifySubscriptionForm> {
     _selectedCategoryTitle = categories[subscription.category].name;
     NumberFormat f = NumberFormat("00", "en_US");
     _regCostController.text =
-        "\$${subscription.cost / 100}.${f.format(subscription.cost % 100)}";
+        "\$${subscription.cost ~/ 100}.${f.format(subscription.cost % 100)}";
     _trialCostController.text =
-        "\$${subscription.trialCost ?? 0 / 100}.${f.format(subscription.trialCost ?? 0 % 100)}";
+        "\$${subscription.trialCost ?? 0 ~/ 100}.${f.format(subscription.trialCost ?? 0 % 100)}";
   }
 
   @override
@@ -443,7 +452,7 @@ class _ModifySubscriptionFormState extends State<ModifySubscriptionForm> {
                   // you'd often call a server or save the information in a database.
 
                   ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Creating Subscription...')));
+                      SnackBar(content: Text('Modifying Subscription...')));
 
                   try {
                     await client.subscriptionsIdPatch(
