@@ -61,7 +61,7 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
                       client.subscriptionsPost(
                           subscription: Subscription(
                         title: "Test",
-                        category: 1,
+                        category: 2,
                         recurrence: "weekly",
                         startsAt: DateTime(2020, 1, 1),
                         cost: 1000,
