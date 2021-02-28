@@ -1,0 +1,7 @@
+.openapi-generator-ignore
+lib/api.dart
+lib/api/default_api.dart
+lib/api_client.dart
+lib/model/category.dart
+lib/model/subscription.dart
+pubspec.yaml

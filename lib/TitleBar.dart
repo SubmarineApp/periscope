@@ -1,14 +1,23 @@
+import 'package:backend_api/api.dart';
 import 'package:flutter/material.dart';
 import 'package:submarine/CalendarPage.dart';
 import 'package:submarine/OverviewPage.dart';
 import 'package:submarine/SubscriptionsPage.dart';
 
 class TitleBar extends StatefulWidget {
+  final DefaultApi client;
+
+  TitleBar({this.client});
+
   @override
-  _TitleBarState createState() => _TitleBarState();
+  _TitleBarState createState() => _TitleBarState(client: this.client);
 }
 
 class _TitleBarState extends State<TitleBar> {
+  final DefaultApi client;
+
+  _TitleBarState({this.client});
+
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
@@ -43,7 +52,9 @@ class _TitleBarState extends State<TitleBar> {
           children: [
             OverviewPage(),
             CalendarPage(),
-            SubscriptionsPage(),
+            SubscriptionsPage(
+              client: this.client,
+            ),
           ],
         ),
       ),

@@ -44,3 +44,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+openapi.yaml
+openapi-dart-generator-4.2.jar
+openapi-generator-cli-5.0.1.jar
