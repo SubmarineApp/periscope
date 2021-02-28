@@ -62,6 +62,24 @@ class DefaultApi {
   /// Returns all subscriptions for this user
   /// 
   ///
+  /// Deletes a specific subscription
+    Future 
+  subscriptionsIdDelete(int id, {Options options}) async {
+
+    final response = await apiDelegate.subscriptionsIdDelete(id,  options: options, );
+
+    if(response.statusCode >= 400) {
+      throw ApiException(response.statusCode, await decodeBodyBytes(response));
+    } else {
+      return await apiDelegate.subscriptionsIdDelete_decode(response);
+    }
+  }
+
+  /// 
+  ///
+  /// Deletes a specific subscription
+  /// 
+  ///
   /// Returns information about a specific subscription
     Future<Subscription> 
   subscriptionsIdGet(int id, {Options options}) async {
@@ -78,6 +96,24 @@ class DefaultApi {
   /// 
   ///
   /// Returns information about a specific subscription
+  /// 
+  ///
+  /// Edits a specific subscription
+    Future 
+  subscriptionsIdPatch(int id, {Options options}) async {
+
+    final response = await apiDelegate.subscriptionsIdPatch(id,  options: options, );
+
+    if(response.statusCode >= 400) {
+      throw ApiException(response.statusCode, await decodeBodyBytes(response));
+    } else {
+      return await apiDelegate.subscriptionsIdPatch_decode(response);
+    }
+  }
+
+  /// 
+  ///
+  /// Edits a specific subscription
   /// 
   ///
   /// Creates a single subscription
@@ -255,6 +291,52 @@ DefaultApiDelegate(this.apiClient) : assert(apiClient != null);
     return null;
     }
     Future<ApiResponse>
+  subscriptionsIdDelete(int id, {Options options}) async {
+    Object postBody;
+
+    // verify required params are set
+        if(id == null) {
+        throw ApiException(400, 'Missing required param: id');
+        }
+
+    // create path and map variables
+    final __path = '/subscriptions/{id}/'.replaceAll('{' + 'id' + '}', id.toString());
+
+    // query params
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{}..addAll(options?.headers?.cast<String, String>() ?? {});
+    if(headerParams['Accept'] == null) {
+      // we only want to accept this format as we can parse it
+      headerParams['Accept'] = 'application/json';
+    }
+
+
+    final authNames = <String>[];
+    final opt = options ?? Options();
+
+      final contentTypes = [];
+
+      if (contentTypes.isNotEmpty && headerParams['Content-Type'] == null) {
+      headerParams['Content-Type'] = contentTypes[0];
+      }
+      if (postBody != null) {
+      postBody = LocalApiClient.serialize(postBody);
+      }
+
+    opt.headers = headerParams;
+    opt.method = 'DELETE';
+
+    return await apiClient.invokeAPI(__path, queryParams, postBody, authNames, opt);
+    }
+
+    Future 
+  subscriptionsIdDelete_decode(ApiResponse response) async {
+    if(response.body != null) {
+    }
+
+    return;
+    }
+    Future<ApiResponse>
   subscriptionsIdGet(int id, {Options options}) async {
     Object postBody;
 
@@ -300,6 +382,52 @@ DefaultApiDelegate(this.apiClient) : assert(apiClient != null);
     }
 
     return null;
+    }
+    Future<ApiResponse>
+  subscriptionsIdPatch(int id, {Options options}) async {
+    Object postBody;
+
+    // verify required params are set
+        if(id == null) {
+        throw ApiException(400, 'Missing required param: id');
+        }
+
+    // create path and map variables
+    final __path = '/subscriptions/{id}/'.replaceAll('{' + 'id' + '}', id.toString());
+
+    // query params
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{}..addAll(options?.headers?.cast<String, String>() ?? {});
+    if(headerParams['Accept'] == null) {
+      // we only want to accept this format as we can parse it
+      headerParams['Accept'] = 'application/json';
+    }
+
+
+    final authNames = <String>[];
+    final opt = options ?? Options();
+
+      final contentTypes = [];
+
+      if (contentTypes.isNotEmpty && headerParams['Content-Type'] == null) {
+      headerParams['Content-Type'] = contentTypes[0];
+      }
+      if (postBody != null) {
+      postBody = LocalApiClient.serialize(postBody);
+      }
+
+    opt.headers = headerParams;
+    opt.method = 'PATCH';
+
+    return await apiClient.invokeAPI(__path, queryParams, postBody, authNames, opt);
+    }
+
+    Future 
+  subscriptionsIdPatch_decode(ApiResponse response) async {
+    if(response.body != null) {
+    }
+
+    return;
     }
     Future<ApiResponse>
   subscriptionsPost({Options options, DateTime startsAt, DateTime endsAt, int category, DateTime nextRecurrence, DateTime recursBefore, Subscription subscription }) async {

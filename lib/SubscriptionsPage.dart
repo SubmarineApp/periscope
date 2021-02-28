@@ -32,6 +32,52 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
     setState(() {});
   }
 
+  _updateSubscriptions() async {
+    items = await client.subscriptionsGet();
+    setState(() {});
+  }
+
+  Future<void> _showMyDialog() async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false, // user must tap button!
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('AlertDialog Title'),
+          content: SingleChildScrollView(
+            child: ListBody(
+              children: <Widget>[
+                Text(
+                    'Are you sure you want to remove ${selected.length} Subscriptions?'),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+                child: Text('Yes'),
+                onPressed: () {
+                  selected.forEach((element) {
+                    try {
+                      client.subscriptionsIdDelete(element.id);
+                    } catch (e) {
+                      debugPrint(e);
+                    }
+                  });
+                  Navigator.of(context).pop();
+                  _updateSubscriptions();
+                }),
+            TextButton(
+              child: Text('No'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   onSortColum(int columnIndex, bool ascending) {
     if (columnIndex == 0) {
       if (ascending) {
@@ -77,7 +123,9 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
                 ),
                 TextButton(
                   child: Text('Remove'),
-                  onPressed: () {/** */},
+                  onPressed: () {
+                    this._showMyDialog();
+                  },
                 ),
               ],
             ),
