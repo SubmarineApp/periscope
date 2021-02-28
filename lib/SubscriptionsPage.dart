@@ -8,14 +8,16 @@ import 'package:syncfusion_flutter_datagrid/datagrid.dart';
 
 class SubscriptionsPage extends StatefulWidget {
   final DefaultApi client;
-  List<Subscription> items = <Subscription>[];
-  HashMap<int, Category> categories = HashMap<int, Category>();
+  final List<Subscription> subscriptions;
+  final HashMap<int, Category> categories;
 
-  SubscriptionsPage({this.client, this.items, this.categories});
+  SubscriptionsPage({this.client, this.subscriptions, this.categories});
 
   @override
   _SubscriptionsPageState createState() => _SubscriptionsPageState(
-      client: this.client, items: this.items, categories: this.categories);
+      client: this.client,
+      subscriptions: this.subscriptions,
+      categories: this.categories);
 }
 
 class _SubscriptionDataSource extends DataGridSource<Subscription> {
@@ -36,8 +38,18 @@ class _SubscriptionDataSource extends DataGridSource<Subscription> {
         return subscription.title;
       case 'category':
         return categories[subscription.category].name;
+      case 'monthly_cost':
+        switch (subscription.recurrence) {
+          case 'monthly':
+            return subscription.cost / 100.0;
+          case 'weekly':
+            return (subscription.cost / 100.0) * 4.0;
+          case 'yearly':
+            return (subscription.cost / 100.0) / 12.0;
+        }
+        return ' ';
       case 'cost':
-        return subscription.cost;
+        return subscription.cost / 100.0;
       case 'starts_at':
         return subscription.startsAt;
       case 'recurrence':
@@ -54,30 +66,15 @@ class _SubscriptionDataSource extends DataGridSource<Subscription> {
 
 class _SubscriptionsPageState extends State<SubscriptionsPage> {
   final DefaultApi client;
-  List<Subscription> items = <Subscription>[];
-  HashMap<int, Category> categories = HashMap<int, Category>();
-  Set<Subscription> selected = Set<Subscription>();
-  bool sort = false;
-  final formatCurrency = new NumberFormat.simpleCurrency();
+  List<Subscription> subscriptions;
+  final HashMap<int, Category> categories;
   final _formKey = GlobalKey<FormState>();
   _SubscriptionDataSource _subscriptionDataSource;
+  final DataGridController _dataGridController = DataGridController();
 
-  _SubscriptionsPageState({this.client, this.items, this.categories}) {
-    this._subscriptionDataSource =
-        _SubscriptionDataSource(categories: categories, subscriptions: items);
-    _init();
-  }
-
-  Future _init() async {
-    items = await client.subscriptionsGet();
-    (await client.categoriesGet()).forEach((e) => {categories[e.id] = e});
-    setState(() {});
-  }
-
-  Future _updateSubscriptions() async {
-    items = await client.subscriptionsGet();
-    _subscriptionDataSource.updateDataSource();
-    setState(() {});
+  _SubscriptionsPageState({this.client, this.subscriptions, this.categories}) {
+    this._subscriptionDataSource = _SubscriptionDataSource(
+        categories: categories, subscriptions: subscriptions);
   }
 
   Future<void> _confirmCancelation() async {
@@ -90,8 +87,7 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
           content: SingleChildScrollView(
             child: ListBody(
               children: <Widget>[
-                Text(
-                    'Are you sure you want to Cancel ${selected.length} Subscriptions?'),
+                Text('Are you sure you want to Cancel this Subscription?'),
               ],
             ),
           ),
@@ -99,16 +95,16 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
             TextButton(
                 child: Text('Yes'),
                 onPressed: () {
-                  selected.forEach((element) {
-                    try {
-                      element.endsAt = DateTime.now();
-                      client.subscriptionsIdPatch(element.id, element);
-                    } catch (e) {
-                      debugPrint(e);
-                    }
-                  });
+                  Subscription sub = this._dataGridController.selectedRow;
+                  try {
+                    sub.endsAt = DateTime.now();
+                    client.subscriptionsIdPatch(sub.id, sub);
+                  } catch (e) {
+                    debugPrint(e);
+                  }
                   Navigator.of(context).pop();
-                  _updateSubscriptions();
+                  // TODO: Update parent's list of subscriptions
+                  // _updateSubscriptions();
                 }),
             TextButton(
               child: Text('No'),
@@ -122,17 +118,6 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
     );
   }
 
-  // TODO: Implement sorting
-  onSortColum(int columnIndex, bool ascending) {
-    if (columnIndex == 0) {
-      if (ascending) {
-        items.sort((a, b) => a.title.compareTo(b.title));
-      } else {
-        items.sort((a, b) => b.title.compareTo(a.title));
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(builder: (context, constraints) {
@@ -141,7 +126,7 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
           ButtonBar(
             alignment: MainAxisAlignment.start,
             children: <Widget>[
-              TextButton(
+              ElevatedButton(
                 child: Text('Add'),
                 onPressed: () {
                   Navigator.of(context).push(
@@ -158,28 +143,45 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
                   setState(() {});
                 },
               ),
-              TextButton(
+              ElevatedButton(
                 child: Text('Modify'),
+                style: ButtonStyle(
+                    backgroundColor:
+                        MaterialStateProperty.all<Color>(Colors.amber)),
                 onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (BuildContext context) {
-                        return ModifySubscriptionForm(
-                          formKey: _formKey,
-                          client: client,
-                          categories: categories,
-                          subscription: selected.first,
-                        );
-                      },
-                    ),
-                  );
-                  setState(() {});
+                  Subscription sub = this._dataGridController.selectedRow;
+                  if (sub != null) {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (BuildContext context) {
+                          return ModifySubscriptionForm(
+                            formKey: _formKey,
+                            client: client,
+                            categories: categories,
+                            subscription: sub,
+                          );
+                        },
+                      ),
+                    );
+                    setState(() {});
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text('A row must be selected first.')));
+                  }
                 },
               ),
-              TextButton(
+              ElevatedButton(
                 child: Text('Cancel'),
+                style: ButtonStyle(
+                    backgroundColor:
+                        MaterialStateProperty.all<Color>(Colors.red)),
                 onPressed: () {
-                  this._confirmCancelation();
+                  if (this._dataGridController.selectedRow != null) {
+                    this._confirmCancelation();
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text('A row must be selected first.')));
+                  }
                 },
               ),
             ],
@@ -188,14 +190,39 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
             height: constraints.maxHeight - 44,
             child: SfDataGrid(
               source: _subscriptionDataSource,
+              controller: this._dataGridController,
               columnWidthMode: ColumnWidthMode.fill,
+              allowSorting: true,
+              allowMultiColumnSorting: true,
+              selectionMode: SelectionMode.single,
               columns: <GridColumn>[
-                GridTextColumn(headerText: 'Title', mappingName: 'title'),
-                GridTextColumn(headerText: 'Category', mappingName: 'category'),
-                GridNumericColumn(
-                    headerText: 'Monthly Cost', mappingName: 'cost'),
                 GridTextColumn(
-                    headerText: 'Recurrence', mappingName: 'recurrence'),
+                  headerText: 'Title',
+                  mappingName: 'title',
+                  allowSorting: true,
+                ),
+                GridTextColumn(
+                  headerText: 'Category',
+                  mappingName: 'category',
+                  allowSorting: true,
+                ),
+                GridNumericColumn(
+                  headerText: 'Cost',
+                  mappingName: 'cost',
+                  numberFormat: NumberFormat.simpleCurrency(),
+                  allowSorting: true,
+                ),
+                GridNumericColumn(
+                  headerText: 'Monthly Cost',
+                  mappingName: 'monthly_cost',
+                  numberFormat: NumberFormat.simpleCurrency(),
+                  allowSorting: true,
+                ),
+                GridTextColumn(
+                  headerText: 'Recurrence',
+                  mappingName: 'recurrence',
+                  allowSorting: true,
+                ),
               ],
             ),
           ),
@@ -251,9 +278,9 @@ class _ModifySubscriptionFormState extends State<ModifySubscriptionForm> {
     _selectedCategoryTitle = categories[subscription.category].name;
     NumberFormat f = NumberFormat("00", "en_US");
     _regCostController.text =
-        "\$${subscription.cost / 100}.${f.format(subscription.cost % 100)}";
+        "\$${subscription.cost ~/ 100}.${f.format(subscription.cost % 100)}";
     _trialCostController.text =
-        "\$${subscription.trialCost ?? 0 / 100}.${f.format(subscription.trialCost ?? 0 % 100)}";
+        "\$${subscription.trialCost ?? 0 ~/ 100}.${f.format(subscription.trialCost ?? 0 % 100)}";
   }
 
   @override
@@ -270,145 +297,38 @@ class _ModifySubscriptionFormState extends State<ModifySubscriptionForm> {
     // TODO: Fix formatting to look nice
     return Scaffold(
       appBar: AppBar(),
-      body: Form(
-        key: formKey,
-        child: Column(
-          children: <Widget>[
-            TextFormField(
-              controller: _titleController,
-              validator: (value) {
-                if (value.isEmpty) {
-                  return 'Please enter a title';
-                }
-                return null;
-              },
-              decoration: InputDecoration(
-                labelText: "Title",
-              ),
-            ),
-            TextFormField(
-              controller: _regCostController,
-              keyboardType: TextInputType.number,
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
-                _regCostCurrencyFormatter,
-              ],
-              validator: (value) {
-                if (value.isEmpty) {
-                  return 'Please enter a cost';
-                }
-                return null;
-              },
-              decoration: InputDecoration(
-                labelText: "Cost",
-              ),
-            ),
-            DropdownButton<String>(
-              value: _recurrence,
-              icon: Icon(Icons.arrow_downward),
-              iconSize: 24,
-              elevation: 16,
-              underline: Container(
-                height: 2,
-                color: Colors.blue,
-              ),
-              onChanged: (String newValue) {
-                setState(() {
-                  _recurrence = newValue;
-                });
-              },
-              items: <String>[
-                'weekly',
-                'monthly',
-                'yearly',
-              ].map<DropdownMenuItem<String>>((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
-                );
-              }).toList(),
-            ),
-            DropdownButton<String>(
-              value: _selectedCategoryTitle,
-              icon: Icon(Icons.arrow_downward),
-              iconSize: 24,
-              elevation: 16,
-              underline: Container(
-                height: 2,
-                color: Colors.blue,
-              ),
-              onChanged: (String newValue) {
-                setState(() {
-                  _selectedCategoryTitle = newValue;
-                });
-              },
-              items: categories.values
-                  .map<DropdownMenuItem<String>>(
-                      (v) => DropdownMenuItem<String>(
-                            value: v.name,
-                            child: Text(v.name),
-                          ))
-                  .toList(),
-            ),
-            Text("Start Date"),
-            Row(
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          return Form(
+            key: formKey,
+            child: Column(
               children: <Widget>[
-                Text("${DateFormat.yMMMMd('en_US').format(_startDate)}"),
-                ElevatedButton(
-                  onPressed: () async {
-                    _startDate = await showDatePicker(
-                      context: context,
-                      initialDate: DateTime.now(),
-                      firstDate: DateTime(2000),
-                      lastDate: DateTime(2025),
-                    );
-                    setState(() {});
-                  },
-                  child: Icon(Icons.calendar_today),
-                ),
-              ],
-            ),
-            Row(
-              children: <Widget>[
-                Text("Trial Period?"),
-                Checkbox(
-                  value: _isTrialSubscription,
-                  onChanged: (value) {
-                    setState(() {
-                      _isTrialSubscription = value;
-                    });
-                  },
-                ),
-              ],
-            ),
-            Visibility(
-              visible: _isTrialSubscription,
-              child: Column(
-                children: <Widget>[
-                  Text("Trial End Date"),
-                  Row(
-                    children: <Widget>[
-                      Text("${DateFormat.yMMMMd('en_US').format(_startDate)}"),
-                      ElevatedButton(
-                        onPressed: () async {
-                          _trialEndDate = await showDatePicker(
-                            context: context,
-                            initialDate: DateTime.now(),
-                            firstDate: DateTime(2000),
-                            lastDate: DateTime(2025),
-                          );
-                          setState(() {});
-                        },
-                        child: Icon(Icons.calendar_today),
-                      ),
-                    ],
+                Container(
+                  padding: EdgeInsets.only(left: 20, right: 20),
+                  child: TextFormField(
+                    controller: _titleController,
+                    style: TextStyle(fontSize: 24),
+                    validator: (value) {
+                      if (value.isEmpty) {
+                        return 'Please enter a title';
+                      }
+                      return null;
+                    },
+                    decoration: InputDecoration(
+                      labelText: "Title",
+                      labelStyle: TextStyle(fontSize: 24),
+                    ),
                   ),
-                  TextFormField(
-                    controller: _trialCostController,
+                ),
+                Container(
+                  padding: EdgeInsets.only(left: 20, right: 20),
+                  child: TextFormField(
+                    controller: _regCostController,
+                    style: TextStyle(fontSize: 24),
                     keyboardType: TextInputType.number,
                     inputFormatters: [
                       FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
-                      _trialCostCurrencyFormatter,
+                      _regCostCurrencyFormatter,
                     ],
                     validator: (value) {
                       if (value.isEmpty) {
@@ -417,46 +337,223 @@ class _ModifySubscriptionFormState extends State<ModifySubscriptionForm> {
                       return null;
                     },
                     decoration: InputDecoration(
-                      labelText: "Trial Cost",
+                      labelText: "Cost",
+                      labelStyle: TextStyle(fontSize: 24),
                     ),
                   ),
-                ],
-              ),
+                ),
+                Container(
+                  padding: EdgeInsets.only(left: 20, right: 20),
+                  child: DropdownButton<String>(
+                    value: _recurrence,
+                    icon: Icon(Icons.arrow_downward),
+                    iconSize: 24,
+                    elevation: 16,
+                    underline: Container(
+                      height: 2,
+                      color: Colors.blue,
+                    ),
+                    onChanged: (String newValue) {
+                      setState(() {
+                        _recurrence = newValue;
+                      });
+                    },
+                    items: <String>[
+                      'weekly',
+                      'monthly',
+                      'yearly',
+                    ].map<DropdownMenuItem<String>>((String value) {
+                      return DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(
+                          value,
+                          style: TextStyle(fontSize: 20),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+                Container(
+                  padding: EdgeInsets.only(left: 20, right: 20),
+                  child: DropdownButton<String>(
+                    value: _selectedCategoryTitle,
+                    icon: Icon(Icons.arrow_downward),
+                    iconSize: 24,
+                    elevation: 16,
+                    underline: Container(
+                      height: 2,
+                      color: Colors.blue,
+                    ),
+                    onChanged: (String newValue) {
+                      setState(() {
+                        _selectedCategoryTitle = newValue;
+                      });
+                    },
+                    items: categories.values
+                        .map<DropdownMenuItem<String>>(
+                            (v) => DropdownMenuItem<String>(
+                                  value: v.name,
+                                  child: Text(
+                                    v.name,
+                                    style: TextStyle(fontSize: 20),
+                                  ),
+                                ))
+                        .toList(),
+                  ),
+                ),
+                Container(
+                  padding: EdgeInsets.only(left: 20, right: 20, top: 20),
+                  child: Text(
+                    "Start Date",
+                    style: TextStyle(fontSize: 24),
+                  ),
+                ),
+                Row(
+                  children: <Widget>[
+                    Container(
+                      padding: EdgeInsets.only(left: 20, right: 20),
+                      child: Text(
+                        "${DateFormat.yMMMMd('en_US').format(_startDate)}",
+                        style: TextStyle(fontSize: 20),
+                      ),
+                    ),
+                    ElevatedButton(
+                      onPressed: () async {
+                        _startDate = await showDatePicker(
+                          context: context,
+                          initialDate: DateTime.now(),
+                          firstDate: DateTime(2000),
+                          lastDate: DateTime(2025),
+                        );
+                        setState(() {});
+                      },
+                      child: Icon(Icons.calendar_today),
+                    ),
+                  ],
+                ),
+                Container(
+                  padding: EdgeInsets.only(left: 20, right: 20, top: 20),
+                  child: Row(
+                    children: <Widget>[
+                      Text(
+                        "Trial Period?",
+                        style: TextStyle(fontSize: 20),
+                      ),
+                      Checkbox(
+                        value: _isTrialSubscription,
+                        onChanged: (value) {
+                          setState(() {
+                            _isTrialSubscription = value;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                Visibility(
+                  visible: _isTrialSubscription,
+                  child: Column(
+                    children: <Widget>[
+                      Container(
+                        padding: EdgeInsets.only(left: 20, right: 20, top: 20),
+                        child: Text(
+                          "Trial End Date",
+                          style: TextStyle(fontSize: 24),
+                        ),
+                      ),
+                      Row(
+                        children: <Widget>[
+                          Container(
+                            padding: EdgeInsets.only(left: 20, right: 20),
+                            child: Text(
+                              "${DateFormat.yMMMMd('en_US').format(_startDate)}",
+                              style: TextStyle(fontSize: 20),
+                            ),
+                          ),
+                          ElevatedButton(
+                            onPressed: () async {
+                              _trialEndDate = await showDatePicker(
+                                context: context,
+                                initialDate: DateTime.now(),
+                                firstDate: DateTime(2000),
+                                lastDate: DateTime(2025),
+                              );
+                              setState(() {});
+                            },
+                            child: Icon(Icons.calendar_today),
+                          ),
+                        ],
+                      ),
+                      Container(
+                        padding: EdgeInsets.only(left: 20, right: 20),
+                        child: TextFormField(
+                          controller: _trialCostController,
+                          style: TextStyle(fontSize: 24),
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
+                            _trialCostCurrencyFormatter,
+                          ],
+                          validator: (value) {
+                            if (value.isEmpty) {
+                              return 'Please enter a cost';
+                            }
+                            return null;
+                          },
+                          decoration: InputDecoration(
+                            labelText: "Trial Cost",
+                            labelStyle: TextStyle(fontSize: 24),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: EdgeInsets.only(top: 40, left: 20, right: 20),
+                  child: ElevatedButton(
+                    style: ButtonStyle(
+                        textStyle: MaterialStateProperty.all<TextStyle>(
+                            TextStyle(fontSize: 26)),
+                        minimumSize:
+                            MaterialStateProperty.all<Size>(Size(130, 80))),
+                    onPressed: () async {
+                      // Validate returns true if the form is valid, otherwise false.
+                      if (formKey.currentState.validate()) {
+                        // If the form is valid, display a snackbar. In the real world,
+                        // you'd often call a server or save the information in a database.
+
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                            content: Text('Modifying Subscription...')));
+
+                        try {
+                          await client.subscriptionsIdPatch(
+                              subscription.id,
+                              Subscription(
+                                title: _titleController.text,
+                                category:
+                                    _categoryReverseMap[_selectedCategoryTitle],
+                                recurrence: _recurrence,
+                                startsAt: _startDate,
+                                cost: _regCostCurrencyFormatter
+                                    .getUnformattedInputAsInt(),
+                                trialEndsAt: _trialEndDate,
+                                trialCost: _trialCostCurrencyFormatter
+                                    .getUnformattedInputAsInt(),
+                              ));
+                        } catch (e) {
+                          debugPrint(e);
+                        }
+                        Navigator.of(context).pop();
+                      }
+                    },
+                    child: Text('Submit'),
+                  ),
+                ),
+              ],
             ),
-            ElevatedButton(
-              onPressed: () async {
-                // Validate returns true if the form is valid, otherwise false.
-                if (formKey.currentState.validate()) {
-                  // If the form is valid, display a snackbar. In the real world,
-                  // you'd often call a server or save the information in a database.
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Creating Subscription...')));
-
-                  try {
-                    await client.subscriptionsIdPatch(
-                        subscription.id,
-                        Subscription(
-                          title: _titleController.text,
-                          category: _categoryReverseMap[_selectedCategoryTitle],
-                          recurrence: _recurrence,
-                          startsAt: _startDate,
-                          cost: _regCostCurrencyFormatter
-                              .getUnformattedInputAsInt(),
-                          trialEndsAt: _trialEndDate,
-                          trialCost: _trialCostCurrencyFormatter
-                              .getUnformattedInputAsInt(),
-                        ));
-                  } catch (e) {
-                    debugPrint(e);
-                  }
-                  Navigator.of(context).pop();
-                }
-              },
-              child: Text('Submit'),
-            )
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -510,145 +607,38 @@ class _AddSubscriptionFormState extends State<AddSubscriptionForm> {
     // TODO: Fix formatting to look nice
     return Scaffold(
       appBar: AppBar(),
-      body: Form(
-        key: formKey,
-        child: Column(
-          children: <Widget>[
-            TextFormField(
-              controller: _titleController,
-              validator: (value) {
-                if (value.isEmpty) {
-                  return 'Please enter a title';
-                }
-                return null;
-              },
-              decoration: InputDecoration(
-                labelText: "Title",
-              ),
-            ),
-            TextFormField(
-              controller: _regCostController,
-              keyboardType: TextInputType.number,
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
-                _regCostCurrencyFormatter,
-              ],
-              validator: (value) {
-                if (value.isEmpty) {
-                  return 'Please enter a cost';
-                }
-                return null;
-              },
-              decoration: InputDecoration(
-                labelText: "Cost",
-              ),
-            ),
-            DropdownButton<String>(
-              value: _recurrence,
-              icon: Icon(Icons.arrow_downward),
-              iconSize: 24,
-              elevation: 16,
-              underline: Container(
-                height: 2,
-                color: Colors.blue,
-              ),
-              onChanged: (String newValue) {
-                setState(() {
-                  _recurrence = newValue;
-                });
-              },
-              items: <String>[
-                'weekly',
-                'monthly',
-                'yearly',
-              ].map<DropdownMenuItem<String>>((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
-                );
-              }).toList(),
-            ),
-            DropdownButton<String>(
-              value: _selectedCategoryTitle,
-              icon: Icon(Icons.arrow_downward),
-              iconSize: 24,
-              elevation: 16,
-              underline: Container(
-                height: 2,
-                color: Colors.blue,
-              ),
-              onChanged: (String newValue) {
-                setState(() {
-                  _selectedCategoryTitle = newValue;
-                });
-              },
-              items: categories.values
-                  .map<DropdownMenuItem<String>>(
-                      (v) => DropdownMenuItem<String>(
-                            value: v.name,
-                            child: Text(v.name),
-                          ))
-                  .toList(),
-            ),
-            Text("Start Date"),
-            Row(
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          return Form(
+            key: formKey,
+            child: Column(
               children: <Widget>[
-                Text("${DateFormat.yMMMMd('en_US').format(_startDate)}"),
-                ElevatedButton(
-                  onPressed: () async {
-                    _startDate = await showDatePicker(
-                      context: context,
-                      initialDate: DateTime.now(),
-                      firstDate: DateTime(2000),
-                      lastDate: DateTime(2025),
-                    );
-                    setState(() {});
-                  },
-                  child: Icon(Icons.calendar_today),
-                ),
-              ],
-            ),
-            Row(
-              children: <Widget>[
-                Text("Trial Period?"),
-                Checkbox(
-                  value: _isTrialSubscription,
-                  onChanged: (value) {
-                    setState(() {
-                      _isTrialSubscription = value;
-                    });
-                  },
-                ),
-              ],
-            ),
-            Visibility(
-              visible: _isTrialSubscription,
-              child: Column(
-                children: <Widget>[
-                  Text("Trial End Date"),
-                  Row(
-                    children: <Widget>[
-                      Text("${DateFormat.yMMMMd('en_US').format(_startDate)}"),
-                      ElevatedButton(
-                        onPressed: () async {
-                          _trialEndDate = await showDatePicker(
-                            context: context,
-                            initialDate: DateTime.now(),
-                            firstDate: DateTime(2000),
-                            lastDate: DateTime(2025),
-                          );
-                          setState(() {});
-                        },
-                        child: Icon(Icons.calendar_today),
-                      ),
-                    ],
+                Container(
+                  padding: EdgeInsets.only(left: 20, right: 20),
+                  child: TextFormField(
+                    controller: _titleController,
+                    style: TextStyle(fontSize: 24),
+                    validator: (value) {
+                      if (value.isEmpty) {
+                        return 'Please enter a title';
+                      }
+                      return null;
+                    },
+                    decoration: InputDecoration(
+                      labelText: "Title",
+                      labelStyle: TextStyle(fontSize: 24),
+                    ),
                   ),
-                  TextFormField(
-                    controller: _trialCostController,
+                ),
+                Container(
+                  padding: EdgeInsets.only(left: 20, right: 20),
+                  child: TextFormField(
+                    controller: _regCostController,
+                    style: TextStyle(fontSize: 24),
                     keyboardType: TextInputType.number,
                     inputFormatters: [
                       FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
-                      _trialCostCurrencyFormatter,
+                      _regCostCurrencyFormatter,
                     ],
                     validator: (value) {
                       if (value.isEmpty) {
@@ -657,45 +647,222 @@ class _AddSubscriptionFormState extends State<AddSubscriptionForm> {
                       return null;
                     },
                     decoration: InputDecoration(
-                      labelText: "Trial Cost",
+                      labelText: "Cost",
+                      labelStyle: TextStyle(fontSize: 24),
                     ),
                   ),
-                ],
-              ),
+                ),
+                Container(
+                  padding: EdgeInsets.only(left: 20, right: 20),
+                  child: DropdownButton<String>(
+                    value: _recurrence,
+                    icon: Icon(Icons.arrow_downward),
+                    iconSize: 24,
+                    elevation: 16,
+                    underline: Container(
+                      height: 2,
+                      color: Colors.blue,
+                    ),
+                    onChanged: (String newValue) {
+                      setState(() {
+                        _recurrence = newValue;
+                      });
+                    },
+                    items: <String>[
+                      'weekly',
+                      'monthly',
+                      'yearly',
+                    ].map<DropdownMenuItem<String>>((String value) {
+                      return DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(
+                          value,
+                          style: TextStyle(fontSize: 20),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+                Container(
+                  padding: EdgeInsets.only(left: 20, right: 20),
+                  child: DropdownButton<String>(
+                    value: _selectedCategoryTitle,
+                    icon: Icon(Icons.arrow_downward),
+                    iconSize: 24,
+                    elevation: 16,
+                    underline: Container(
+                      height: 2,
+                      color: Colors.blue,
+                    ),
+                    onChanged: (String newValue) {
+                      setState(() {
+                        _selectedCategoryTitle = newValue;
+                      });
+                    },
+                    items: categories.values
+                        .map<DropdownMenuItem<String>>(
+                            (v) => DropdownMenuItem<String>(
+                                  value: v.name,
+                                  child: Text(
+                                    v.name,
+                                    style: TextStyle(fontSize: 20),
+                                  ),
+                                ))
+                        .toList(),
+                  ),
+                ),
+                Container(
+                  padding: EdgeInsets.only(left: 20, right: 20, top: 20),
+                  child: Text(
+                    "Start Date",
+                    style: TextStyle(fontSize: 24),
+                  ),
+                ),
+                Row(
+                  children: <Widget>[
+                    Container(
+                      padding: EdgeInsets.only(left: 20, right: 20),
+                      child: Text(
+                        "${DateFormat.yMMMMd('en_US').format(_startDate)}",
+                        style: TextStyle(fontSize: 20),
+                      ),
+                    ),
+                    ElevatedButton(
+                      onPressed: () async {
+                        _startDate = await showDatePicker(
+                          context: context,
+                          initialDate: DateTime.now(),
+                          firstDate: DateTime(2000),
+                          lastDate: DateTime(2025),
+                        );
+                        setState(() {});
+                      },
+                      child: Icon(Icons.calendar_today),
+                    ),
+                  ],
+                ),
+                Container(
+                  padding: EdgeInsets.only(left: 20, right: 20, top: 20),
+                  child: Row(
+                    children: <Widget>[
+                      Text(
+                        "Trial Period?",
+                        style: TextStyle(fontSize: 20),
+                      ),
+                      Checkbox(
+                        value: _isTrialSubscription,
+                        onChanged: (value) {
+                          setState(() {
+                            _isTrialSubscription = value;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                Visibility(
+                  visible: _isTrialSubscription,
+                  child: Column(
+                    children: <Widget>[
+                      Container(
+                        padding: EdgeInsets.only(left: 20, right: 20, top: 20),
+                        child: Text(
+                          "Trial End Date",
+                          style: TextStyle(fontSize: 24),
+                        ),
+                      ),
+                      Row(
+                        children: <Widget>[
+                          Container(
+                            padding: EdgeInsets.only(left: 20, right: 20),
+                            child: Text(
+                              "${DateFormat.yMMMMd('en_US').format(_startDate)}",
+                              style: TextStyle(fontSize: 20),
+                            ),
+                          ),
+                          ElevatedButton(
+                            onPressed: () async {
+                              _trialEndDate = await showDatePicker(
+                                context: context,
+                                initialDate: DateTime.now(),
+                                firstDate: DateTime(2000),
+                                lastDate: DateTime(2025),
+                              );
+                              setState(() {});
+                            },
+                            child: Icon(Icons.calendar_today),
+                          ),
+                        ],
+                      ),
+                      Container(
+                        padding: EdgeInsets.only(left: 20, right: 20),
+                        child: TextFormField(
+                          controller: _trialCostController,
+                          style: TextStyle(fontSize: 24),
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
+                            _trialCostCurrencyFormatter,
+                          ],
+                          validator: (value) {
+                            if (value.isEmpty) {
+                              return 'Please enter a cost';
+                            }
+                            return null;
+                          },
+                          decoration: InputDecoration(
+                            labelText: "Trial Cost",
+                            labelStyle: TextStyle(fontSize: 24),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: EdgeInsets.only(top: 40, left: 20, right: 20),
+                  child: ElevatedButton(
+                    style: ButtonStyle(
+                        textStyle: MaterialStateProperty.all<TextStyle>(
+                            TextStyle(fontSize: 26)),
+                        minimumSize:
+                            MaterialStateProperty.all<Size>(Size(130, 80))),
+                    onPressed: () async {
+                      // Validate returns true if the form is valid, otherwise false.
+                      if (formKey.currentState.validate()) {
+                        // If the form is valid, display a snackbar. In the real world,
+                        // you'd often call a server or save the information in a database.
+
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                            content: Text('Creating Subscription...')));
+
+                        try {
+                          await client.subscriptionsPost(
+                              subscription: Subscription(
+                            title: _titleController.text,
+                            category:
+                                _categoryReverseMap[_selectedCategoryTitle],
+                            recurrence: _recurrence,
+                            startsAt: _startDate,
+                            cost: _regCostCurrencyFormatter
+                                .getUnformattedInputAsInt(),
+                            trialEndsAt: _trialEndDate,
+                            trialCost: _trialCostCurrencyFormatter
+                                .getUnformattedInputAsInt(),
+                          ));
+                        } catch (e) {
+                          debugPrint(e);
+                        }
+                        Navigator.of(context).pop();
+                      }
+                    },
+                    child: Text('Submit'),
+                  ),
+                ),
+              ],
             ),
-            ElevatedButton(
-              onPressed: () async {
-                // Validate returns true if the form is valid, otherwise false.
-                if (formKey.currentState.validate()) {
-                  // If the form is valid, display a snackbar. In the real world,
-                  // you'd often call a server or save the information in a database.
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Creating Subscription...')));
-
-                  try {
-                    await client.subscriptionsPost(
-                        subscription: Subscription(
-                      title: _titleController.text,
-                      category: _categoryReverseMap[_selectedCategoryTitle],
-                      recurrence: _recurrence,
-                      startsAt: _startDate,
-                      cost:
-                          _regCostCurrencyFormatter.getUnformattedInputAsInt(),
-                      trialEndsAt: _trialEndDate,
-                      trialCost: _trialCostCurrencyFormatter
-                          .getUnformattedInputAsInt(),
-                    ));
-                  } catch (e) {
-                    debugPrint(e);
-                  }
-                  Navigator.of(context).pop();
-                }
-              },
-              child: Text('Submit'),
-            )
-          ],
-        ),
+          );
+        },
       ),
     );
   }
