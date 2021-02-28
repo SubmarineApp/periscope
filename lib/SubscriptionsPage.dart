@@ -115,17 +115,6 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
     );
   }
 
-  // TODO: Implement sorting
-  onSortColum(int columnIndex, bool ascending) {
-    if (columnIndex == 0) {
-      if (ascending) {
-        subscriptions.sort((a, b) => a.title.compareTo(b.title));
-      } else {
-        subscriptions.sort((a, b) => b.title.compareTo(a.title));
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(builder: (context, constraints) {
