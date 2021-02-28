@@ -17,7 +17,7 @@ class TitleBar extends StatefulWidget {
 
 class _TitleBarState extends State<TitleBar> {
   final DefaultApi client;
-  List<Subscription> items = <Subscription>[];
+  List<Subscription> subscriptions = <Subscription>[];
   HashMap<int, Category> categories = HashMap<int, Category>();
 
   _TitleBarState({this.client}) {
@@ -25,7 +25,7 @@ class _TitleBarState extends State<TitleBar> {
   }
 
   _init() async {
-    items = await client.subscriptionsGet();
+    subscriptions = await client.subscriptionsGet();
     (await client.categoriesGet()).forEach((e) => {categories[e.id] = e});
     setState(() {});
   }
@@ -63,7 +63,7 @@ class _TitleBarState extends State<TitleBar> {
         body: TabBarView(
           children: [
             OverviewPage(
-              subscriptions: this.items,
+              subscriptions: this.subscriptions,
               categories: this.categories,
               client: this.client,
             ),
@@ -73,7 +73,7 @@ class _TitleBarState extends State<TitleBar> {
               client: this.client,
             ),
             SubscriptionsPage(
-              subscriptions: this.items,
+              subscriptions: this.subscriptions,
               categories: this.categories,
               client: this.client,
             ),

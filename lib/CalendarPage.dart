@@ -2,6 +2,7 @@ import 'dart:collection';
 
 import 'package:flutter/material.dart';
 import 'package:backend_api/api.dart';
+import 'package:intl/intl.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 
 class CalendarPage extends StatefulWidget {
@@ -25,10 +26,15 @@ class CalendarPage extends StatefulWidget {
 
 class _CalendarPageState extends State<CalendarPage> {
   final DefaultApi client;
-  List<Subscription> items = <Subscription>[];
+  List<Subscription> subscriptions = <Subscription>[];
   HashMap<int, Category> categories = HashMap<int, Category>();
-
-  //
+  Map<int, Color> _colors = {
+    0: Colors.black,
+    1: Colors.amber,
+    2: Colors.green,
+    3: Colors.orange,
+    4: Colors.purple,
+  };
 
   _CalendarPageState({
     this.client,
@@ -39,9 +45,43 @@ class _CalendarPageState extends State<CalendarPage> {
   }
 
   _init() async {
-    items = await client.subscriptionsGet(); //fils in list
+    subscriptions = await client.subscriptionsGet(); //fils in list
     (await client.categoriesGet()).forEach((e) => {categories[e.id] = e});
     setState(() {});
+  }
+
+  List<Appointment> _getDataSource() {
+    List<Appointment> events = <Appointment>[];
+    subscriptions.forEach((e) {
+      final DateTime startTime = e.startsAt;
+      final DateTime endTime = startTime.add(const Duration(hours: 2));
+      RecurrenceProperties rprop = RecurrenceProperties();
+      switch (e.recurrence) {
+        case 'weekly':
+          rprop.recurrenceType = RecurrenceType.weekly;
+          rprop.dayOfWeek = e.startsAt.weekday;
+          break;
+        case 'monthly':
+          rprop.recurrenceType = RecurrenceType.monthly;
+          rprop.dayOfMonth = e.startsAt.day;
+          break;
+        case 'yearly':
+          rprop.recurrenceType = RecurrenceType.yearly;
+          rprop.month = e.startsAt.month;
+          rprop.dayOfMonth = e.startsAt.day;
+          break;
+      }
+      events.add(Appointment(
+        subject: e.title,
+        startTime: startTime,
+        endTime: endTime,
+        color: _colors[e.category % _colors.length],
+        isAllDay: true,
+        notes: NumberFormat.simpleCurrency().format(e.cost / 100.0),
+        recurrenceRule: SfCalendar.generateRRule(rprop, startTime, endTime),
+      ));
+    });
+    return events;
   }
 
   @override
@@ -53,6 +93,10 @@ class _CalendarPageState extends State<CalendarPage> {
       todayHighlightColor: Colors.redAccent.shade100,
       showNavigationArrow: true,
       monthViewSettings: MonthViewSettings(
+          monthCellStyle: MonthCellStyle(
+            leadingDatesTextStyle: TextStyle(color: Colors.grey[400]),
+            trailingDatesTextStyle: TextStyle(color: Colors.grey[400]),
+          ),
           appointmentDisplayMode: MonthAppointmentDisplayMode.appointment,
           showAgenda: true,
           agendaStyle: AgendaStyle(
@@ -60,7 +104,7 @@ class _CalendarPageState extends State<CalendarPage> {
             appointmentTextStyle: TextStyle(
                 fontSize: 14,
                 fontStyle: FontStyle.normal,
-                color: Colors.grey.shade900),
+                color: Colors.grey.shade200),
             dateTextStyle: TextStyle(
                 fontStyle: FontStyle.normal,
                 fontSize: 12,
@@ -77,29 +121,11 @@ class _CalendarPageState extends State<CalendarPage> {
   }
 }
 
-List<Event> _getDataSource() {
-  List<Event> events = <Event>[];
-  items.foreach((e) {
-    final DateTime today = DateTime.now();
-    final DateTime startTime = e.startTime;
-    final DateTime endTime = startTime.add(const Duration(hours: 2));
-    final double cost = e.cost;
-    events.add(Event(
-        eventName: e.title,
-        from: startTime,
-        to: endTime,
-        background: const Color(0xFF0F8644),
-        isAllDay: true,
-        cost: cost));
-  });
-  return events;
-}
-
 //EventDataSource sets the appointment collection data source to calendar
 class EventDataSource extends CalendarDataSource {
   //Create an event data source, used to set the appointment collection to the
   //calendar
-  EventDataSource(List<Event> source) {
+  EventDataSource(List<Appointment> source) {
     appointments = source;
   }
 
@@ -130,25 +156,11 @@ class EventDataSource extends CalendarDataSource {
 
   @override
   String getNotes(int index) {
-    return appointments[index].cost;
+    return appointments[index].notes;
   }
-}
 
-//Event class containing properties to hold information about the event data
-class Event {
-  String eventName;
-  DateTime from;
-  DateTime to;
-  Color background;
-  bool isAllDay;
-  double cost;
-
-  //Create an event with required details
-  Event(
-      {this.eventName,
-      this.from,
-      this.to,
-      this.background,
-      this.isAllDay,
-      this.cost});
+  @override
+  String getRecurrenceRule(int index) {
+    return appointments[index].recurrenceRule;
+  }
 }
