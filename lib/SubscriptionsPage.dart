@@ -274,13 +274,13 @@ class _ModifySubscriptionFormState extends State<ModifySubscriptionForm> {
     _recurrence = subscription.recurrence;
     _titleController.text = subscription.title;
     _startDate = subscription.startsAt;
-    _trialEndDate = subscription.trialEndsAt;
+    _trialEndDate = subscription.trialEndsAt ?? DateTime.now();
     _selectedCategoryTitle = categories[subscription.category].name;
     NumberFormat f = NumberFormat("00", "en_US");
     _regCostController.text =
         "\$${subscription.cost ~/ 100}.${f.format(subscription.cost % 100)}";
     _trialCostController.text =
-        "\$${subscription.trialCost ?? 0 ~/ 100}.${f.format(subscription.trialCost ?? 0 % 100)}";
+        "\$${(subscription.trialCost ?? 0) ~/ 100}.${f.format((subscription.trialCost ?? 0) % 100)}";
   }
 
   @override

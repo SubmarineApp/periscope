@@ -29,11 +29,11 @@ class _CalendarPageState extends State<CalendarPage> {
   List<Subscription> subscriptions = <Subscription>[];
   HashMap<int, Category> categories = HashMap<int, Category>();
   Map<int, Color> _colors = {
-    0: Colors.black,
-    1: Colors.amber,
-    2: Colors.green,
-    3: Colors.orange,
-    4: Colors.purple,
+    0: Color(0xFFA65D90),
+    1: Color(0xFF7A5DA6),
+    2: Color(0xFF5D9EA6),
+    3: Color(0xFF67A65D),
+    4: Color(0xFFA68A5D),
   };
 
   _CalendarPageState({

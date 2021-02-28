@@ -130,22 +130,25 @@ class _OverviewPageState extends State<OverviewPage> {
     return Center(
       child: Container(
         child: GridView.count(
+          padding: EdgeInsets.only(left: 250, right: 250),
           crossAxisCount: 2,
           children: [
-            SfCircularChart(
-                title: ChartTitle(text: "Monthly Spending by Category"),
-                series: <CircularSeries>[
-                  PieSeries<CategoryMonthlyPctAccumulator, String>(
-                    dataSource: categorySpendingThisMonth,
-                    xValueMapper: (data, _) => data.categoryName,
-                    yValueMapper: (data, _) => data.amount,
-                    dataLabelMapper: (data, _) =>
-                        "${data.categoryName}\n${data.amount.toStringAsFixed(1)}%",
-                    dataLabelSettings: DataLabelSettings(isVisible: true),
-                    explode: true,
-                    // pointColorMapper: (data, _) => Color.fromRGBO(255, 0, 0, 1))
-                  )
-                ]),
+            Flexible(
+              child: SfCircularChart(
+                  title: ChartTitle(text: "Monthly Spending by Category"),
+                  series: <CircularSeries>[
+                    PieSeries<CategoryMonthlyPctAccumulator, String>(
+                      dataSource: categorySpendingThisMonth,
+                      xValueMapper: (data, _) => data.categoryName,
+                      yValueMapper: (data, _) => data.amount,
+                      dataLabelMapper: (data, _) =>
+                          "${data.categoryName}\n${data.amount.toStringAsFixed(1)}%",
+                      dataLabelSettings: DataLabelSettings(isVisible: true),
+                      explode: true,
+                      // pointColorMapper: (data, _) => Color.fromRGBO(255, 0, 0, 1))
+                    )
+                  ]),
+            ),
             SfCartesianChart(
               primaryXAxis: DateTimeAxis(),
               primaryYAxis:
