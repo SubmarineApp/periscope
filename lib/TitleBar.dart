@@ -65,7 +65,11 @@ class _TitleBarState extends State<TitleBar> {
             OverviewPage(
               client: this.client,
             ),
-            CalendarPage(),
+            CalendarPage(
+              subscriptions: this.subscriptions,
+              categories: this.categories,
+              client: this.client,
+            ),
             SubscriptionsPage(
               items: this.items,
               categories: this.categories,
