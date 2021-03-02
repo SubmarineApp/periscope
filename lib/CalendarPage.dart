@@ -11,9 +11,9 @@ class CalendarPage extends StatefulWidget {
   final HashMap<int, Category> categories;
 
   CalendarPage({
-    this.client,
-    this.subscriptions,
-    this.categories,
+    @required this.client,
+    @required this.subscriptions,
+    @required this.categories,
   });
 
   @override
@@ -37,18 +37,10 @@ class _CalendarPageState extends State<CalendarPage> {
   };
 
   _CalendarPageState({
-    this.client,
-    this.subscriptions,
-    this.categories,
-  }) {
-    _init();
-  }
-
-  _init() async {
-    subscriptions = await client.subscriptionsGet(); //fils in list
-    (await client.categoriesGet()).forEach((e) => {categories[e.id] = e});
-    setState(() {});
-  }
+    @required this.client,
+    @required this.subscriptions,
+    @required this.categories,
+  });
 
   List<Appointment> _getDataSource() {
     List<Appointment> events = <Appointment>[];
