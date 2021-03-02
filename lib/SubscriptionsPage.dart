@@ -326,7 +326,7 @@ class _ModifySubscriptionFormState extends State<ModifySubscriptionForm> {
         builder: (context, constraints) {
           return Form(
             key: formKey,
-            child: Column(
+            child: ListView(
               children: <Widget>[
                 Container(
                   padding: EdgeInsets.only(left: 20, right: 20),
@@ -427,6 +427,7 @@ class _ModifySubscriptionFormState extends State<ModifySubscriptionForm> {
                   ),
                 ),
                 Container(
+                  alignment: Alignment.center,
                   padding: EdgeInsets.only(left: 20, right: 20, top: 20),
                   child: Text(
                     "Start Date",
