@@ -40,21 +40,27 @@ class _TitleBarState extends State<TitleBar> {
           bottom: TabBar(
             tabs: [
               Tab(
-                icon: Text(
-                  "Overview",
-                  style: TextStyle(fontSize: 24),
+                icon: FittedBox(
+                  child: Text(
+                    "Overview",
+                    style: TextStyle(fontSize: 24),
+                  ),
                 ),
               ),
               Tab(
-                icon: Text(
-                  "Calendar",
-                  style: TextStyle(fontSize: 24),
+                icon: FittedBox(
+                  child: Text(
+                    "Calendar",
+                    style: TextStyle(fontSize: 24),
+                  ),
                 ),
               ),
               Tab(
-                icon: Text(
-                  "Subscriptions",
-                  style: TextStyle(fontSize: 24),
+                icon: FittedBox(
+                  child: Text(
+                    "Subscriptions",
+                    style: TextStyle(fontSize: 24),
+                  ),
                 ),
               ),
             ],
