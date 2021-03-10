@@ -30,13 +30,14 @@ class _OverviewPageState extends State<OverviewPage> {
   List<MonthlySpendingAccumulator> _monthlySpending = [];
   Map<Category, List<MonthlySpendingAccumulator>> _categoryMonthlySpending =
       new HashMap<Category, List<MonthlySpendingAccumulator>>();
-  Map<int, charts.Color> _colors = {
-    0: charts.Color(a: 0xFF, b: 0xA6, g: 0x5D, r: 0x90),
-    1: charts.Color(a: 0xFF, b: 0x7A, g: 0x5D, r: 0xA6),
-    2: charts.Color(a: 0xFF, b: 0x5D, g: 0x9E, r: 0xA6),
-    3: charts.Color(a: 0xFF, b: 0x67, g: 0xA6, r: 0x5D),
-    4: charts.Color(a: 0xFF, b: 0xA6, g: 0x8A, r: 0x5D),
-  };
+  List<charts.Color> _colors = [
+    charts.Color(a: 0xFF, b: 0xA6, g: 0x5D, r: 0x90),
+    charts.Color(a: 0xFF, b: 0x7A, g: 0x5D, r: 0xA6),
+    charts.Color(a: 0xFF, b: 0x5D, g: 0x9E, r: 0xA6),
+    charts.Color(a: 0xFF, b: 0x67, g: 0xA6, r: 0x5D),
+    charts.Color(a: 0xFF, b: 0xA6, g: 0x8A, r: 0x5D),
+    charts.Color(a: 0xFF, b: 0xA6, g: 0x5D, r: 0x90),
+  ];
 
   _OverviewPageState({this.client, this.subscriptions, this.categories}) {
     _init();
@@ -145,6 +146,9 @@ class _OverviewPageState extends State<OverviewPage> {
 
   @override
   Widget build(BuildContext context) {
+    final simpleCurrencyFormatter =
+        new charts.BasicNumericTickFormatterSpec.fromNumberFormat(
+            new NumberFormat.compactSimpleCurrency());
     return GridView.extent(
       maxCrossAxisExtent: 500,
       children: [
@@ -178,20 +182,20 @@ class _OverviewPageState extends State<OverviewPage> {
             direction: Axis.vertical,
             children: [
               Text(
-                "Monthly Spending by Category",
+                "Adjusted Monthly Spending by Category",
                 style: TextStyle(fontSize: 18),
               ),
               Flexible(
                 child: charts.PieChart(
                   [
                     charts.Series<CategoryMonthlyPctAccumulator, String>(
-                      id: 'Spending',
+                      id: 'Adjusted Monthly Spending',
                       data: _categorySpendingThisMonth,
                       domainFn: (data, _) => data.categoryName,
                       measureFn: (data, _) => data.amount,
                       labelAccessorFn: (data, _) =>
                           "${data.categoryName}\n${data.amount.toStringAsFixed(1)}%",
-                      colorFn: (datum, index) => _colors[index],
+                      colorFn: (_, index) => _colors[index],
                     )
                   ],
                   defaultRenderer: new charts.ArcRendererConfig(
@@ -202,28 +206,40 @@ class _OverviewPageState extends State<OverviewPage> {
             ],
           ),
         ),
-        SfCartesianChart(
-          primaryXAxis: DateTimeAxis(),
-          primaryYAxis:
-              NumericAxis(numberFormat: NumberFormat.simpleCurrency()),
-          title: ChartTitle(text: "Total Spending by Month"),
-          legend: Legend(isVisible: true, position: LegendPosition.bottom),
-          series: <ChartSeries>[
-            LineSeries<MonthlySpendingAccumulator, DateTime>(
-                name: 'Total Spending',
-                dataSource: _monthlySpending,
-                xValueMapper: (data, _) => data.month,
-                yValueMapper: (data, _) => data.amount),
-            ..._categoryMonthlySpending
-                .map((category, monthlySpendingAcc) => MapEntry(
-                    category,
-                    LineSeries<MonthlySpendingAccumulator, DateTime>(
-                        name: category.name,
-                        dataSource: monthlySpendingAcc,
-                        xValueMapper: (data, _) => data.month,
-                        yValueMapper: (data, _) => data.amount)))
-                .values
-          ],
+        Container(
+          padding: EdgeInsets.all(16),
+          child: Flex(
+            direction: Axis.vertical,
+            children: [
+              Text(
+                "Total Spending by Month",
+                style: TextStyle(fontSize: 18),
+              ),
+              Flexible(
+                child: charts.TimeSeriesChart(
+                  <charts.Series<MonthlySpendingAccumulator, DateTime>>[
+                    ..._categoryMonthlySpending
+                        .map(
+                          (category, monthlySpendingAcc) => MapEntry(
+                            category,
+                            charts.Series<MonthlySpendingAccumulator, DateTime>(
+                              id: category.name,
+                              data: monthlySpendingAcc,
+                              domainFn: (data, _) => data.month,
+                              measureFn: (data, _) => data.amount,
+                              colorFn: (_, i) => _colors[category.id],
+                            ),
+                          ),
+                        )
+                        .values
+                  ],
+                  primaryMeasureAxis: charts.NumericAxisSpec(
+                    tickFormatterSpec: simpleCurrencyFormatter,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );
