@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 import 'package:jiffy/jiffy.dart';
+import 'package:charts_flutter/flutter.dart' as charts;
 
 class OverviewPage extends StatefulWidget {
   final DefaultApi client;
@@ -29,6 +30,13 @@ class _OverviewPageState extends State<OverviewPage> {
   List<MonthlySpendingAccumulator> _monthlySpending = [];
   Map<Category, List<MonthlySpendingAccumulator>> _categoryMonthlySpending =
       new HashMap<Category, List<MonthlySpendingAccumulator>>();
+  Map<int, charts.Color> _colors = {
+    0: charts.Color(a: 0xFF, b: 0xA6, g: 0x5D, r: 0x90),
+    1: charts.Color(a: 0xFF, b: 0x7A, g: 0x5D, r: 0xA6),
+    2: charts.Color(a: 0xFF, b: 0x5D, g: 0x9E, r: 0xA6),
+    3: charts.Color(a: 0xFF, b: 0x67, g: 0xA6, r: 0x5D),
+    4: charts.Color(a: 0xFF, b: 0xA6, g: 0x8A, r: 0x5D),
+  };
 
   _OverviewPageState({this.client, this.subscriptions, this.categories}) {
     _init();
@@ -164,20 +172,35 @@ class _OverviewPageState extends State<OverviewPage> {
             ],
           ),
         ),
-        SfCircularChart(
-          title: ChartTitle(text: "Monthly Spending by Category"),
-          series: <CircularSeries>[
-            PieSeries<CategoryMonthlyPctAccumulator, String>(
-              dataSource: _categorySpendingThisMonth,
-              xValueMapper: (data, _) => data.categoryName,
-              yValueMapper: (data, _) => data.amount,
-              dataLabelMapper: (data, _) =>
-                  "${data.categoryName}\n${data.amount.toStringAsFixed(1)}%",
-              dataLabelSettings: DataLabelSettings(isVisible: true),
-              explode: true,
-              // pointColorMapper: (data, _) => Color.fromRGBO(255, 0, 0, 1))
-            )
-          ],
+        Container(
+          padding: EdgeInsets.all(16),
+          child: Flex(
+            direction: Axis.vertical,
+            children: [
+              Text(
+                "Monthly Spending by Category",
+                style: TextStyle(fontSize: 18),
+              ),
+              Flexible(
+                child: charts.PieChart(
+                  [
+                    charts.Series<CategoryMonthlyPctAccumulator, String>(
+                      id: 'Spending',
+                      data: _categorySpendingThisMonth,
+                      domainFn: (data, _) => data.categoryName,
+                      measureFn: (data, _) => data.amount,
+                      labelAccessorFn: (data, _) =>
+                          "${data.categoryName}\n${data.amount.toStringAsFixed(1)}%",
+                      colorFn: (datum, index) => _colors[index],
+                    )
+                  ],
+                  defaultRenderer: new charts.ArcRendererConfig(
+                    arcRendererDecorators: [new charts.ArcLabelDecorator()],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
         SfCartesianChart(
           primaryXAxis: DateTimeAxis(),
