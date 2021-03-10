@@ -24,10 +24,10 @@ class _OverviewPageState extends State<OverviewPage> {
   final DefaultApi client;
   List<Subscription> subscriptions;
   final HashMap<int, Category> categories;
-  List<CategoryMonthlyPctAccumulator> categorySpendingThisMonth =
+  List<CategoryMonthlyPctAccumulator> _categorySpendingThisMonth =
       <CategoryMonthlyPctAccumulator>[];
-  List<MonthlySpendingAccumulator> monthlySpending = [];
-  Map<Category, List<MonthlySpendingAccumulator>> categoryMonthlySpending =
+  List<MonthlySpendingAccumulator> _monthlySpending = [];
+  Map<Category, List<MonthlySpendingAccumulator>> _categoryMonthlySpending =
       new HashMap<Category, List<MonthlySpendingAccumulator>>();
 
   _OverviewPageState({this.client, this.subscriptions, this.categories}) {
@@ -84,7 +84,7 @@ class _OverviewPageState extends State<OverviewPage> {
       totalSpending += recurrenceCost;
     });
     tempSpending.forEach((category, amount) {
-      categorySpendingThisMonth.add(CategoryMonthlyPctAccumulator(
+      _categorySpendingThisMonth.add(CategoryMonthlyPctAccumulator(
           categoryName: categories[category].name,
           amount: amount.toDouble() / totalSpending * 100));
     });
@@ -111,10 +111,10 @@ class _OverviewPageState extends State<OverviewPage> {
       }
     });
     spendingPerMonth.forEach((month, amount) {
-      monthlySpending.add(
+      _monthlySpending.add(
           MonthlySpendingAccumulator(month: month, amount: amount / 100.0));
     });
-    categoryMonthlySpending = spendingPerCategoryPerMonth.map((category, map) {
+    _categoryMonthlySpending = spendingPerCategoryPerMonth.map((category, map) {
       List<MonthlySpendingAccumulator> monthlySpendingForCategory = [];
       map.forEach((month, amount) {
         monthlySpendingForCategory.add(
@@ -125,51 +125,82 @@ class _OverviewPageState extends State<OverviewPage> {
     setState(() {});
   }
 
+  int _findSpendingForThisMonth() {
+    int totalCost = 0;
+    subscriptions.forEach((sub) {
+      var recurrencesThisMonth = _recurrencesThisMonth(sub, DateTime.now());
+      totalCost += recurrencesThisMonth.length * sub.cost;
+    });
+
+    return totalCost;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Flex(
-      direction: Axis.horizontal,
+    return GridView.extent(
+      maxCrossAxisExtent: 500,
       children: [
-        Flexible(
-          child: SfCircularChart(
-              title: ChartTitle(text: "Monthly Spending by Category"),
-              series: <CircularSeries>[
-                PieSeries<CategoryMonthlyPctAccumulator, String>(
-                  dataSource: categorySpendingThisMonth,
-                  xValueMapper: (data, _) => data.categoryName,
-                  yValueMapper: (data, _) => data.amount,
-                  dataLabelMapper: (data, _) =>
-                      "${data.categoryName}\n${data.amount.toStringAsFixed(1)}%",
-                  dataLabelSettings: DataLabelSettings(isVisible: true),
-                  explode: true,
-                  // pointColorMapper: (data, _) => Color.fromRGBO(255, 0, 0, 1))
-                )
-              ]),
-        ),
-        Flexible(
-          child: SfCartesianChart(
-            primaryXAxis: DateTimeAxis(),
-            primaryYAxis:
-                NumericAxis(numberFormat: NumberFormat.simpleCurrency()),
-            title: ChartTitle(text: "Total Spending by Month"),
-            legend: Legend(isVisible: true, position: LegendPosition.bottom),
-            series: <ChartSeries>[
-              LineSeries<MonthlySpendingAccumulator, DateTime>(
-                  name: 'Total Spending',
-                  dataSource: monthlySpending,
-                  xValueMapper: (data, _) => data.month,
-                  yValueMapper: (data, _) => data.amount),
-              ...categoryMonthlySpending
-                  .map((category, monthlySpendingAcc) => MapEntry(
-                      category,
-                      LineSeries<MonthlySpendingAccumulator, DateTime>(
-                          name: category.name,
-                          dataSource: monthlySpendingAcc,
-                          xValueMapper: (data, _) => data.month,
-                          yValueMapper: (data, _) => data.amount)))
-                  .values
+        Container(
+          padding: EdgeInsets.all(16),
+          child: Flex(
+            direction: Axis.vertical,
+            children: [
+              Text(
+                "Actual Spending for this Month",
+                style: TextStyle(fontSize: 18),
+              ),
+              Expanded(
+                child: Center(
+                  child: Text(
+                    NumberFormat.simpleCurrency()
+                        .format(_findSpendingForThisMonth() / 100),
+                    style: TextStyle(
+                      fontSize: 36,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
+        ),
+        SfCircularChart(
+          title: ChartTitle(text: "Monthly Spending by Category"),
+          series: <CircularSeries>[
+            PieSeries<CategoryMonthlyPctAccumulator, String>(
+              dataSource: _categorySpendingThisMonth,
+              xValueMapper: (data, _) => data.categoryName,
+              yValueMapper: (data, _) => data.amount,
+              dataLabelMapper: (data, _) =>
+                  "${data.categoryName}\n${data.amount.toStringAsFixed(1)}%",
+              dataLabelSettings: DataLabelSettings(isVisible: true),
+              explode: true,
+              // pointColorMapper: (data, _) => Color.fromRGBO(255, 0, 0, 1))
+            )
+          ],
+        ),
+        SfCartesianChart(
+          primaryXAxis: DateTimeAxis(),
+          primaryYAxis:
+              NumericAxis(numberFormat: NumberFormat.simpleCurrency()),
+          title: ChartTitle(text: "Total Spending by Month"),
+          legend: Legend(isVisible: true, position: LegendPosition.bottom),
+          series: <ChartSeries>[
+            LineSeries<MonthlySpendingAccumulator, DateTime>(
+                name: 'Total Spending',
+                dataSource: _monthlySpending,
+                xValueMapper: (data, _) => data.month,
+                yValueMapper: (data, _) => data.amount),
+            ..._categoryMonthlySpending
+                .map((category, monthlySpendingAcc) => MapEntry(
+                    category,
+                    LineSeries<MonthlySpendingAccumulator, DateTime>(
+                        name: category.name,
+                        dataSource: monthlySpendingAcc,
+                        xValueMapper: (data, _) => data.month,
+                        yValueMapper: (data, _) => data.amount)))
+                .values
+          ],
         ),
       ],
     );
