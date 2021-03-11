@@ -216,7 +216,7 @@ class _OverviewPageState extends State<OverviewPage> {
                 style: TextStyle(fontSize: 18),
               ),
               Flexible(
-                child: charts.TimeSeriesChart(
+                child: _categoryMonthlySpending.isEmpty ? Center(child:CircularProgressIndicator()) : charts.TimeSeriesChart(
                   <charts.Series<MonthlySpendingAccumulator, DateTime>>[
                     ..._categoryMonthlySpending
                         .map(
